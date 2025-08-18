@@ -7,8 +7,11 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// OAuth callback route
-app.get('/auth/callback', (req, res) => {
+// OAuth callback routes (both paths for compatibility)
+app.get('/callback', handleOAuthCallback);
+app.get('/auth/callback', handleOAuthCallback);
+
+function handleOAuthCallback(req, res) {
   const { code, state, error } = req.query;
   
   console.log('OAuth callback received:', { code, state, error });
@@ -49,7 +52,7 @@ app.get('/auth/callback', (req, res) => {
     </body>
     </html>
   `);
-});
+}
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -61,7 +64,8 @@ app.get('/', (req, res) => {
   res.json({ 
     message: 'OAuth Callback Server',
     endpoints: {
-      callback: '/auth/callback',
+      callback: '/callback',
+      'callback-alt': '/auth/callback', 
       health: '/health'
     }
   });
