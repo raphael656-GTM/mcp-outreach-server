@@ -107,20 +107,55 @@ app.post('/mcp', async (req, res) => {
 // Tools endpoint - list available MCP tools
 app.get('/tools', async (req, res) => {
   try {
+    if (!mcpProcess || !isInitialized) {
+      return res.status(503).json({ 
+        error: 'MCP server not initialized',
+        message: 'Server is starting up, please try again in a moment'
+      });
+    }
+
     const request = {
       jsonrpc: '2.0',
       id: Date.now(),
       method: 'tools/list'
     };
 
-    const response = await fetch(`${req.protocol}://${req.get('host')}/mcp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request)
-    }).then(r => r.json());
+    console.log('📥 Tools list request:', JSON.stringify(request));
+
+    // Send request to MCP server
+    mcpProcess.stdin.write(JSON.stringify(request) + '\n');
+
+    // Wait for response
+    const response = await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Request timeout')), 10000);
+      
+      const onData = (data) => {
+        try {
+          const lines = data.toString().split('\n').filter(line => line.trim());
+          for (const line of lines) {
+            try {
+              const parsed = JSON.parse(line);
+              if (parsed.id === request.id) {
+                clearTimeout(timeout);
+                mcpProcess.stdout.removeListener('data', onData);
+                resolve(parsed);
+                return;
+              }
+            } catch (e) {
+              // Skip non-JSON lines
+            }
+          }
+        } catch (e) {
+          // Ignore parsing errors
+        }
+      };
+      
+      mcpProcess.stdout.on('data', onData);
+    });
 
     res.json(response);
   } catch (error) {
+    console.error('❌ Tools request error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -128,6 +163,13 @@ app.get('/tools', async (req, res) => {
 // Call tool endpoint
 app.post('/tools/call', async (req, res) => {
   try {
+    if (!mcpProcess || !isInitialized) {
+      return res.status(503).json({ 
+        error: 'MCP server not initialized',
+        message: 'Server is starting up, please try again in a moment'
+      });
+    }
+
     const { name, arguments: args = {} } = req.body;
     
     const request = {
@@ -137,14 +179,42 @@ app.post('/tools/call', async (req, res) => {
       params: { name, arguments: args }
     };
 
-    const response = await fetch(`${req.protocol}://${req.get('host')}/mcp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request)
-    }).then(r => r.json());
+    console.log('📥 Tool call request:', JSON.stringify(request));
+
+    // Send request to MCP server
+    mcpProcess.stdin.write(JSON.stringify(request) + '\n');
+
+    // Wait for response
+    const response = await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Request timeout')), 30000);
+      
+      const onData = (data) => {
+        try {
+          const lines = data.toString().split('\n').filter(line => line.trim());
+          for (const line of lines) {
+            try {
+              const parsed = JSON.parse(line);
+              if (parsed.id === request.id) {
+                clearTimeout(timeout);
+                mcpProcess.stdout.removeListener('data', onData);
+                resolve(parsed);
+                return;
+              }
+            } catch (e) {
+              // Skip non-JSON lines
+            }
+          }
+        } catch (e) {
+          // Ignore parsing errors
+        }
+      };
+      
+      mcpProcess.stdout.on('data', onData);
+    });
 
     res.json(response);
   } catch (error) {
+    console.error('❌ Tool call error:', error);
     res.status(500).json({ error: error.message });
   }
 });
