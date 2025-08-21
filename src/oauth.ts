@@ -36,17 +36,17 @@ export class OutreachOAuth {
       
       // Check if token is expired
       if (this.tokenData && Date.now() < this.tokenData.expires_at) {
-        console.log('Using existing valid token');
+        console.error('Using existing valid token');
         return this.tokenData.access_token;
       }
       
       // Try to refresh if we have refresh token
       if (this.tokenData?.refresh_token) {
-        console.log('Token expired, refreshing...');
+        console.error('Token expired, refreshing...');
         return await this.refreshToken();
       }
     } catch (error) {
-      console.log('No valid token found, starting OAuth flow...');
+      console.error('No valid token found, starting OAuth flow...');
     }
 
     // Start OAuth flow
@@ -110,8 +110,9 @@ export class OutreachOAuth {
       });
 
       // Start server
-      server = app.listen(3000, () => {
-        console.log('OAuth server listening on http://localhost:3000');
+      const port = this.config.redirectUri.includes('localhost:3001') ? 3001 : 3000;
+      server = app.listen(port, () => {
+        console.error(`OAuth server listening on http://localhost:${port}`);
         
         // Build authorization URL
         const authUrl = new URL('https://api.outreach.io/oauth/authorize');
@@ -120,9 +121,9 @@ export class OutreachOAuth {
         authUrl.searchParams.append('response_type', 'code');
         authUrl.searchParams.append('scope', this.config.scope);
 
-        console.log('\n🔐 Please authorize the application:');
-        console.log(authUrl.toString());
-        console.log('\nOpening browser...\n');
+        console.error('\n🔐 Please authorize the application:');
+        console.error(authUrl.toString());
+        console.error('\nOpening browser...\n');
 
         // Open browser
         const openCommand = process.platform === 'darwin' ? 'open' :

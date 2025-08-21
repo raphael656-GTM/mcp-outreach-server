@@ -1,78 +1,78 @@
 # MCP Outreach Server
 
-An MCP (Model Context Protocol) server for integrating with Outreach.io API. This server enables you to manage sequences, prospects, and accounts programmatically through natural language interactions.
+A Model Context Protocol (MCP) server that provides Claude with direct integration to Outreach.io's sales engagement platform.
 
 ## Features
 
-- **Sequence Management**: Create sequences, add steps, and manage sequence configurations
-- **Prospect Management**: Load prospects from accounts and add them to sequences
-- **Account Search**: Search for accounts by name or domain
-- **Batch Operations**: Add multiple prospects to sequences at once
+- **Prospect Management**: Create, search, update, and tag prospects
+- **Sequence Operations**: Manage sequences and prospect enrollments
+- **Account Management**: Create and search company accounts
+- **Mailbox Access**: List available mailboxes for sending
+- **OAuth 2.0 Authentication**: Secure token-based authentication
+- **Comprehensive Error Handling**: Proper error handling for rate limits and authentication
 
-## Installation
+## Prerequisites
 
-1. Clone this repository:
+- Node.js v18 or higher
+- Outreach.io account with API access
+- OAuth 2.0 application registered in Outreach
+
+## Quick Start
+
+### 1. Set Up Outreach OAuth Application
+
+1. Log into your Outreach account as an admin
+2. Navigate to **Settings → Integrations → API Access**
+3. Click **Create New App** or **Register Application**
+4. Fill in the details:
+   - **Application Name**: "MCP Integration"
+   - **Redirect URI**: `http://localhost:3000/callback`
+   - **Application Type**: "Private" or "Internal"
+5. Select required scopes:
+   - `accounts.all` - Account management
+   - `prospects.all` - Prospect management
+   - `sequences.all` - Sequence operations
+   - `sequenceStates.all` - Sequence enrollment
+   - `mailboxes.all` - Mailbox access
+   - `tags.all` - Tag management
+   - `users.all` - User information
+6. Save and copy your **Client ID** and **Client Secret**
+
+### 2. Install and Configure
+
 ```bash
+# Clone/download the project
 git clone <repository-url>
 cd mcp-outreach-server
-```
 
-2. Install dependencies:
-```bash
+# Install dependencies
 npm install
-```
 
-3. Set up your Outreach API credentials (choose one method):
-
-### Method 1: OAuth 2.0 (Recommended)
-
-a. Register an OAuth app in Outreach:
-   - Log into Outreach as an admin
-   - Go to Settings → Integrations → Developer
-   - Click "Create New App"
-   - Set Redirect URI to: `http://localhost:3000/callback`
-   - Note your Client ID and Client Secret
-
-b. Configure OAuth credentials:
-```bash
-cp .env.oauth.example .env
-```
-
-Edit `.env` and add your OAuth credentials:
-```
-OUTREACH_CLIENT_ID=your_oauth_client_id_here
-OUTREACH_CLIENT_SECRET=your_oauth_client_secret_here
-OUTREACH_REDIRECT_URI=http://localhost:3000/callback
-```
-
-### Method 2: Personal Access Token (Legacy)
-
-a. Get your personal access token:
-   - Log in to your Outreach account
-   - Navigate to Settings > API > Personal Access Tokens
-   - Click "Create Token"
-   - Select the required scopes:
-     - `sequences.all`
-     - `prospects.all`
-     - `accounts.read`
-     - `sequenceStates.all`
-     - `sequenceSteps.all`
-     - `mailboxes.read`
-
-b. Configure token:
-```bash
+# Create environment file
 cp .env.example .env
 ```
 
-Edit `.env` and add your token:
-```
-OUTREACH_API_TOKEN=your_outreach_api_token_here
+Edit `.env` with your OAuth credentials:
+```bash
+OUTREACH_CLIENT_ID=your_client_id_here
+OUTREACH_CLIENT_SECRET=your_client_secret_here
+OUTREACH_REDIRECT_URI=http://localhost:3000/callback
+OUTREACH_API_BASE_URL=https://api.outreach.io/api/v2
+MCP_SERVER_NAME=outreach-mcp
+MCP_SERVER_PORT=3000
 ```
 
-4. Build the TypeScript code:
+### 3. Get OAuth Refresh Token
+
 ```bash
-npm run build
+# Run OAuth setup (opens browser automatically)
+npm run setup
 ```
+
+This will:
+- Open your browser to authorize with Outreach
+- Save the refresh token to your `.env` file
+- Display success confirmation
 
 ## Usage with Claude Desktop
 

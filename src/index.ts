@@ -29,37 +29,19 @@ const server = new Server(
 let outreachClient: OutreachClient;
 
 async function initializeClient() {
-  // Check if using OAuth or direct token
-  if (process.env.OUTREACH_CLIENT_ID && process.env.OUTREACH_CLIENT_SECRET) {
-    // Use OAuth flow
-    const oauth = new OutreachOAuth({
-      clientId: process.env.OUTREACH_CLIENT_ID,
-      clientSecret: process.env.OUTREACH_CLIENT_SECRET,
-      redirectUri: process.env.OUTREACH_REDIRECT_URI || 'http://localhost:3000/callback',
-      scope: 'sequences.all prospects.all accounts.read sequenceStates.all sequenceSteps.all mailboxes.read'
-    });
-    
-    const token = await oauth.initialize();
-    outreachClient = new OutreachClient(
-      token,
-      process.env.OUTREACH_API_URL || 'https://api.outreach.io/api/v2'
-    );
-    
-    // Set up token refresh
-    setInterval(async () => {
-      const newToken = await oauth.getValidToken();
-      outreachClient = new OutreachClient(
-        newToken,
-        process.env.OUTREACH_API_URL || 'https://api.outreach.io/api/v2'
-      );
-    }, 30 * 60 * 1000); // Check every 30 minutes
-  } else {
-    // Fall back to direct token (for backwards compatibility)
-    outreachClient = new OutreachClient(
-      process.env.OUTREACH_API_TOKEN || '',
-      process.env.OUTREACH_API_URL || 'https://api.outreach.io/api/v2'
-    );
+  // Only use direct API token for MCP servers
+  const apiToken = process.env.OUTREACH_API_TOKEN;
+  
+  if (!apiToken) {
+    throw new Error('OUTREACH_API_TOKEN environment variable is required. Please set your Outreach.io API token.');
   }
+
+  outreachClient = new OutreachClient(
+    apiToken,
+    process.env.OUTREACH_API_URL || 'https://api.outreach.io/api/v2'
+  );
+  
+  console.error('MCP Outreach server initialized with API token');
 }
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
