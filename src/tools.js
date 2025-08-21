@@ -244,7 +244,7 @@ export const tools = [
         },
         subject: {
           type: 'string',
-          description: 'Email subject line (use {{prospect.firstName}} for variables)'
+          description: 'Email subject line (use {{first_name}} and {{account.name}} for variables)'
         },
         bodyHtml: {
           type: 'string',
