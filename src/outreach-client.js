@@ -211,7 +211,12 @@ class OutreachClient {
       };
 
       const response = await this.client.post('/sequences', payload);
-      return response.data;
+      // Add helpful UI link for users
+      const sequenceData = response.data;
+      if (sequenceData.data && sequenceData.data.id) {
+        sequenceData._uiLink = `https://web.outreach.io/sequences/${sequenceData.data.id}/overview`;
+      }
+      return sequenceData;
     } catch (error) {
       throw new Error(`Failed to create sequence: ${error.message}`);
     }
