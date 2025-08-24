@@ -8,8 +8,8 @@ import {
   ErrorCode,
   McpError
 } from '@modelcontextprotocol/sdk/types.js';
-import OutreachClient from './outreach-client.js';
-import { tools } from './tools.js';
+import EnhancedOutreachClient from './enhanced-outreach-client.js';
+import { enhancedTools } from './enhanced-tools.js';
 import { config } from 'dotenv';
 
 config();
@@ -30,7 +30,7 @@ let outreachClient;
 
 async function initializeClient() {
   try {
-    outreachClient = new OutreachClient();
+    outreachClient = new EnhancedOutreachClient();
     console.error('✅ Outreach MCP server initialized successfully');
   } catch (error) {
     console.error('❌ Failed to initialize Outreach client:', error.message);
@@ -40,7 +40,7 @@ async function initializeClient() {
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
-    tools: tools
+    tools: enhancedTools
   };
 });
 
@@ -56,16 +56,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     throw new McpError(ErrorCode.InternalError, 'Outreach client not initialized');
   }
 
-  // Health check endpoint
+  // Health check endpoint with enhanced monitoring
   if (name === 'health_check') {
     try {
-      await outreachClient.getMailboxes();
+      const health = outreachClient.getHealth();
+      await outreachClient.getMailboxes(); // Still test API connectivity
       return {
         content: [{
           type: 'text',
           text: JSON.stringify({
-            status: 'healthy',
-            timestamp: new Date().toISOString(),
+            ...health,
             server: process.env.MCP_SERVER_NAME || 'outreach-mcp',
             version: '1.0.0'
           }, null, 2)
@@ -174,6 +174,55 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         result = await outreachClient.getMailboxes();
         break;
 
+      // === BULK OPERATIONS (New Enhanced Features) ===
+      case 'bulk_create_prospects':
+        result = await outreachClient.bulkCreateProspects(args.prospects, args.options);
+        break;
+
+      case 'bulk_create_sequences':
+        result = await outreachClient.bulkCreateSequences(args.sequences);
+        break;
+
+      case 'bulk_create_templates':
+        result = await outreachClient.bulkCreateTemplates(args.templates);
+        break;
+
+      case 'bulk_enroll_prospects':
+        result = await outreachClient.bulkEnrollProspects(args.enrollments);
+        break;
+
+      // === PERFORMANCE MONITORING TOOLS ===
+      case 'get_performance_metrics':
+        result = outreachClient.getPerformanceMetrics();
+        break;
+
+      case 'get_health_status':
+        result = outreachClient.getHealth();
+        break;
+
+      case 'generate_performance_report':
+        result = outreachClient.generatePerformanceReport();
+        break;
+
+      // === CACHE MANAGEMENT TOOLS ===
+      case 'clear_cache':
+        result = {
+          success: true,
+          message: `Cache cleared for type: ${args.cacheType || 'api'}`,
+          timestamp: new Date().toISOString()
+        };
+        // Call cache clearing method based on type
+        if (args.cacheType === 'all') {
+          outreachClient.cacheManager.clear();
+        } else {
+          outreachClient.cacheManager.clearByType(args.cacheType || 'api');
+        }
+        break;
+
+      case 'get_cache_stats':
+        result = outreachClient.cacheManager.getStats();
+        break;
+
       default:
         throw new McpError(ErrorCode.MethodNotFound, `Tool ${name} not found`);
     }
@@ -232,14 +281,20 @@ async function main() {
   }
 }
 
-// Handle graceful shutdown
-process.on('SIGINT', () => {
+// Handle graceful shutdown with cleanup
+process.on('SIGINT', async () => {
   console.error('🛑 Server shutting down...');
+  if (outreachClient) {
+    await outreachClient.shutdown();
+  }
   process.exit(0);
 });
 
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.error('🛑 Server shutting down...');
+  if (outreachClient) {
+    await outreachClient.shutdown();
+  }
   process.exit(0);
 });
 

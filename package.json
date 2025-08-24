@@ -19,10 +19,15 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.3",
+    "agentkeepalive": "^4.6.0",
     "axios": "^1.11.0",
     "dotenv": "^16.6.1",
     "express": "^4.18.0",
-    "open": "^10.2.0"
+    "http-agent": "^0.1.2",
+    "ioredis": "^5.7.0",
+    "node-cache": "^5.1.2",
+    "open": "^10.2.0",
+    "redis": "^5.8.2"
   },
   "devDependencies": {
     "@types/express": "^4.17.0",

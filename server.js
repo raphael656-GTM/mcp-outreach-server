@@ -36,7 +36,7 @@ function initializeMCPServer() {
     const output = data.toString().trim();
     console.log('🔧 MCP Server:', output);
     
-    if (output.includes('MCP Outreach server running')) {
+    if (output.includes('Outreach MCP server running') || output.includes('Enhanced Outreach Client initialized')) {
       isInitialized = true;
     }
   });

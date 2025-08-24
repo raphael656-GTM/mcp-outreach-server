@@ -1,0 +1,60 @@
+{
+  "name": "AI Prospect Research to Outreach Workflow",
+  "description": "Automated pipeline from prospect research to sequence creation",
+  "workflow": {
+    "trigger": {
+      "type": "schedule",
+      "frequency": "daily",
+      "time": "09:00"
+    },
+    "steps": [
+      {
+        "id": "research",
+        "name": "AI Prospect Research",
+        "type": "ai_analysis",
+        "inputs": {
+          "target_criteria": {
+            "industry": "healthcare",
+            "company_size": "100-500",
+            "job_titles": ["CEO", "CTO", "VP Engineering"],
+            "location": "USA"
+          },
+          "research_sources": [
+            "apollo",
+            "linkedin_sales_nav",
+            "company_website",
+            "recent_news"
+          ]
+        },
+        "ai_instructions": "Research prospects matching criteria. Extract: company pain points, recent news, technology stack, growth signals, key initiatives, decision maker info, personalization angles."
+      },
+      {
+        "id": "email_generation",
+        "name": "AI Email Sequence Creation",
+        "type": "ai_writing",
+        "inputs": {
+          "research_data": "{{research.output}}",
+          "email_style": "steve_jobs_direct",
+          "sequence_type": "5_touch_cold_outreach",
+          "value_proposition": "healthcare_digital_transformation"
+        },
+        "ai_instructions": "Create 5-email cold outreach sequence using research data. Include: personalized opening, specific pain point, value proposition, social proof, clear CTA. Use {{first_name}} and {{account.name}} variables."
+      },
+      {
+        "id": "outreach_creation",
+        "name": "MCP Outreach Integration",
+        "type": "http_request",
+        "inputs": {
+          "mcp_server": "your_mcp_server",
+          "actions": [
+            "create_prospects",
+            "create_sequence", 
+            "create_templates",
+            "link_templates_to_steps",
+            "add_prospects_to_sequence"
+          ]
+        }
+      }
+    ]
+  }
+}
