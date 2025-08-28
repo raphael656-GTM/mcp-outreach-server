@@ -6,13 +6,20 @@ WORKDIR /app
 # Add package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Install all dependencies (including devDependencies for building)
+RUN npm ci && npm cache clean --force
 
-# Copy source code
+# Copy source code and build configuration
 COPY src/ src/
+COPY tsconfig.json ./
 COPY server.js ./
 COPY .env.example ./
+
+# Build TypeScript
+RUN npm run build
+
+# Remove devDependencies after build
+RUN npm prune --production
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
