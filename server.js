@@ -32,6 +32,27 @@ app.use((req, res, next) => {
   return res.status(401).json({ error: 'Unauthorized: Invalid API key' });
 });
 
+// Update the openPaths array in the middleware
+app.use((req, res, next) => {
+  const openPaths = [
+    '/health',
+    '/callback',
+    '/',
+    '/auth',           // Add this
+    '/auth/validate'   // Add this
+  ];
+  
+  if (openPaths.includes(req.path)) {
+    return next();
+  }
+  
+  const key = req.headers['x-api-key'];
+  if (!API_KEY || key === API_KEY) {
+    return next();
+  }
+  return res.status(401).json({ error: 'Unauthorized: Invalid API key' });
+});
+
 // Add Claude connector auth endpoints
 app.get('/auth', (req, res) => {
   res.json({
