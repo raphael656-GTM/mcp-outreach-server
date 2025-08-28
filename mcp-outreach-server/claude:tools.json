@@ -1,0 +1,402 @@
+[
+  {
+    "name": "find_sequence",
+    "description": "Find existing sequences by name.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "api": {
+      "url": "https://mcp-outreach-server-production.up.railway.app/find_sequence",
+      "method": "POST",
+      "headers": {
+        "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+        "Content-Type": "application/json"
+      }
+    }
+  },
+  {
+    "name": "create_sequence",
+    "description": "Create a new sequence container.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "shareType": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "api": {
+      "url": "https://mcp-outreach-server-production.up.railway.app/create_sequence",
+      "method": "POST",
+      "headers": {
+        "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+        "Content-Type": "application/json"
+      }
+    }
+  },
+  {
+    "name": "get_sequences",
+    "description": "List all sequences.",
+    "input_schema": {
+      "type": "object",
+      "properties": {}
+    },
+    "api": {
+      "url": "https://mcp-outreach-server-production.up.railway.app/get_sequences",
+      "method": "GET",
+      "headers": {
+        "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+        "Content-Type": "application/json"
+      }
+    }
+  },
+  {
+    "name": "create_sequence_template",
+    "description": "Create email templates.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "subject": { "type": "string" },
+        "bodyHtml": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "trackLinks": { "type": "boolean" },
+        "trackOpens": { "type": "boolean" }
+      },
+      "required": ["name", "subject", "bodyHtml"]
+    },
+    "api": {
+      "url": "https://mcp-outreach-server-production.up.railway.app/create_sequence_template",
+      "method": "POST",
+      "headers": {
+        "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+        "Content-Type": "application/json"
+      }
+    }
+  },
+  {
+    "name": "get_sequence_templates",
+    "description": "List all templates.",
+    "input_schema": {
+      "type": "object",
+      "properties": {}
+    },
+    "api": {
+      "url": "https://mcp-outreach-server-production.up.railway.app/get_sequence_templates",
+      "method": "GET",
+      "headers": {
+        "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+        "Content-Type": "application/json"
+      }
+    }
+  },
+  {
+    "name": "find_sequence_template",
+    "description": "Find template by name.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "api": {
+      "url": "https://mcp-outreach-server-production.up.railway.app/find_sequence_template",
+      "method": "POST",
+      "headers": {
+        "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+        "Content-Type": "application/json"
+      }
+    }
+  },
+  {
+    "name": "create_sequence_step",
+    "description": "Add steps to sequences.",
+    "input_schema": {
+      "type": "object", 
+      "properties": {
+        "sequenceId": { "type": "string" },
+        "stepType": { "type": "string" },
+        "order": { "type": "integer" },
+        "intervalInDays": { "type": "integer" }
+      },
+      "required": ["sequenceId", "stepType", "order", "intervalInDays"]
+    },
+    "api": {
+      "url": "https://mcp-outreach-server-production.up.railway.app/create_sequence_step",
+      "method": "POST",
+      "headers": {
+        "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+        "Content-Type": "application/json"
+      }
+    }
+  },
+  {
+    "name": "get_sequence_steps",
+    "description": "Get steps for a sequence.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "sequenceId": { "type": "string" }
+      },
+      "required": ["sequenceId"]
+    },
+    "api": {
+      "url": "https://mcp-outreach-server-production.up.railway.app/get_sequence_steps",
+      "method": "POST",
+      "headers": {
+        "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+        "Content-Type": "application/json"
+      }
+    }
+  },
+  {
+    "name": "link_template_to_step",
+    "description": "Connect template to step.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "sequenceStepId": { "type": "string" },
+        "templateId": { "type": "string" }
+      },
+      "required": ["sequenceStepId", "templateId"]
+    },
+    "api": {
+      "url": "https://mcp-outreach-server-production.up.railway.app/link_template_to_step",
+      "method": "POST",
+      "headers": {
+        "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+        "Content-Type": "application/json"
+      }
+    }
+  },
+  {
+    "name": "create_prospect",
+    "description": "Create new prospect.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "email": { "type": "string" },
+        "company": { "type": "string" },
+        "title": { "type": "string" }
+      },
+      "required": ["firstName", "lastName", "email"]
+    },
+    "api": {
+      "url": "https://mcp-outreach-server-production.up.railway.app/create_prospect",
+      "method": "POST",
+      "headers": {
+        "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+        "Content-Type": "application/json"
+      }
+    }
+  },
+  {
+    "name": "search_prospects",
+    "description": "Find existing prospects.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "query": { "type": "string" }
+      },
+      "required": ["query"]
+    },
+    "api": {
+      "url": "https://mcp-outreach-server-production.up.railway.app/search_prospects",
+      "method": "POST",
+      "headers": {
+        "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+        "Content-Type": "application/json"
+      }
+    }
+  },
+  {
+    "name": "add_prospect_to_sequence",
+    "description": "Enroll prospect in sequence.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "prospectId": { "type": "string" },
+        "sequenceId": { "type": "string" }
+      },
+      "required": ["prospectId", "sequenceId"]
+    },
+    "api": {
+      "url": "https://mcp-outreach-server-production.up.railway.app/add_prospect_to_sequence",
+      "method": "POST",
+      "headers": {
+        "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+        "Content-Type": "application/json"
+      }
+    }
+  },
+  {
+    "name": "bulk_create_prospects",
+    "description": "Create multiple prospects at once.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "prospects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "firstName": { "type": "string" },
+              "lastName": { "type": "string" },
+              "email": { "type": "string" },
+              "company": { "type": "string" },
+              "title": { "type": "string" }
+            }
+          }
+        }
+      },
+      "required": ["prospects"]
+    },
+    "api": {
+      "url": "https://mcp-outreach-server-production.up.railway.app/bulk_create_prospects",
+      "method": "POST",
+      "headers": {
+        "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+        "Content-Type": "application/json"
+      }
+    }
+  },
+  {
+    "name": "bulk_create_sequences",
+    "description": "Create multiple sequences.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "sequences": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "description": { "type": "string" },
+              "tags": { "type": "array", "items": { "type": "string" } },
+              "shareType": { "type": "string" }
+            }
+          }
+        }
+      },
+      "required": ["sequences"]
+    },
+    "api": {
+      "url": "https://mcp-outreach-server-production.up.railway.app/bulk_create_sequences",
+      "method": "POST",
+      "headers": {
+        "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+        "Content-Type": "application/json"
+      }
+    }
+  },
+  {
+    "name": "bulk_create_templates",
+    "description": "Create multiple templates.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "templates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "subject": { "type": "string" },
+              "bodyHtml": { "type": "string" },
+              "tags": { "type": "array", "items": { "type": "string" } },
+              "trackLinks": { "type": "boolean" },
+              "trackOpens": { "type": "boolean" }
+            }
+          }
+        }
+      },
+      "required": ["templates"]
+    },
+    "api": {
+      "url": "https://mcp-outreach-server-production.up.railway.app/bulk_create_templates",
+      "method": "POST",
+      "headers": {
+        "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+        "Content-Type": "application/json"
+      }
+    }
+  },
+  {
+    "name": "bulk_enroll_prospects",
+    "description": "Enroll multiple prospects.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "prospectIds": { "type": "array", "items": { "type": "string" } },
+        "sequenceId": { "type": "string" }
+      },
+      "required": ["prospectIds", "sequenceId"]
+    },
+    "api": {
+      "url": "https://mcp-outreach-server-production.up.railway.app/bulk_enroll_prospects",
+      "method": "POST",
+      "headers": {
+        "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+        "Content-Type": "application/json"
+      }
+    }
+  },
+  {
+    "name": "get_mailboxes",
+    "description": "List available mailboxes.",
+    "input_schema": {
+      "type": "object",
+      "properties": {}
+    },
+    "api": {
+      "url": "https://mcp-outreach-server-production.up.railway.app/get_mailboxes",
+      "method": "GET",
+      "headers": {
+        "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+        "Content-Type": "application/json"
+      }
+    }
+  },
+  {
+    "name": "health_check",
+    "description": "Check MCP server status.",
+    "input_schema": {
+      "type": "object",
+      "properties": {}
+    },
+    "api": {
+      "url": "https://mcp-outreach-server-production.up.railway.app/health_check",
+      "method": "GET",
+      "headers": {
+        "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+        "Content-Type": "application/json"
+      }
+    }
+  },
+  {
+    "name": "get_performance_metrics",
+    "description": "Get server performance data.",
+    "input_schema": {
+      "type": "object",
+      "properties": {}
+    },
+    "api": {
+      "url": "https://mcp-outreach-server-production.up.railway.app/get_performance_metrics",
+      "method": "GET",
+      "headers": {
+        "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+        "Content-Type": "application/json"
+      }
+    }
+  }
+]

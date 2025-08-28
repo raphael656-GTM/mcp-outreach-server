@@ -14,6 +14,44 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+const API_KEY = '55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8';
+// API key middleware (skip for health and OAuth callback routes)
+app.use((req, res, next) => {
+  const openPaths = [
+    '/health',
+    '/callback',
+    '/',
+  ];
+  if (openPaths.includes(req.path)) {
+    return next();
+  }
+  const key = req.headers['x-api-key'];
+  if (!API_KEY || key === API_KEY) {
+    return next();
+  }
+  return res.status(401).json({ error: 'Unauthorized: Invalid API key' });
+});
+
+// Add Claude connector auth endpoints
+app.get('/auth', (req, res) => {
+  res.json({
+    name: "MCP Outreach Server",
+    version: "1.0",
+    auth_type: "api_key",
+    auth_config: {
+      header_name: "x-api-key"
+    }
+  });
+});
+
+app.post('/auth/validate', (req, res) => {
+  const key = req.headers['x-api-key'];
+  if (!key || key !== API_KEY) {
+    return res.status(401).json({ error: 'Invalid API key' });
+  }
+  res.json({ status: 'authenticated' });
+});
+
 // Store MCP server instance
 let mcpProcess = null;
 let isInitialized = false;
