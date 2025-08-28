@@ -2,11 +2,12 @@
   "name": "mcp-outreach-server",
   "version": "1.0.0",
   "description": "MCP server for Outreach.io integration",
-  "main": "src/index.js",
+  "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "node --watch src/index.js",
+    "start": "node dist/index.js",
+    "dev": "node --watch dist/index.js",
+    "build": "tsc",
     "setup": "node src/setup-oauth.js"
   },
   "keywords": [

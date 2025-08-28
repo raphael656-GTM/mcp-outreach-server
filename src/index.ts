@@ -266,6 +266,36 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         throw new McpError(ErrorCode.MethodNotFound, `Tool ${name} not found`);
     }
   } catch (error: any) {
+    console.error(`Error executing ${name}:`, error);
+    
+    // Handle Axios errors with more detail
+    if (error.response) {
+      const statusCode = error.response.status;
+      const responseData = error.response.data;
+      
+      if (statusCode === 401) {
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          'Authentication failed. Please check your API token.'
+        );
+      } else if (statusCode === 403) {
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          'Access denied. Please check your API permissions.'
+        );
+      } else if (statusCode >= 400 && statusCode < 500) {
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          `Bad request: ${responseData?.errors?.[0]?.detail || error.message}`
+        );
+      } else {
+        throw new McpError(
+          ErrorCode.InternalError,
+          `Server error: ${responseData?.errors?.[0]?.detail || error.message}`
+        );
+      }
+    }
+    
     throw new McpError(
       ErrorCode.InternalError,
       `Error executing ${name}: ${error.message}`

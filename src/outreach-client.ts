@@ -37,8 +37,15 @@ export class OutreachClient {
       },
     };
 
-    const response = await this.client.post('/sequences', payload);
-    return response.data;
+    try {
+      const response = await this.client.post('/sequences', payload);
+      return response.data;
+    } catch (error: any) {
+      if (error.response) {
+        throw new Error(`Failed to create sequence: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
+      }
+      throw error;
+    }
   }
 
   async listSequences(limit: number = 50, offset: number = 0) {
