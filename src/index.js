@@ -174,6 +174,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         result = await outreachClient.getMailboxes();
         break;
 
+      // === HIGH-LEVEL WORKFLOW TOOLS ===
+      case 'create_complete_email_sequence':
+        result = await outreachClient.createCompleteEmailSequence(args);
+        break;
+
+      case 'create_and_enroll_prospect':
+        result = await outreachClient.createAndEnrollProspect(args);
+        break;
+
+      case 'create_campaign_with_prospects':
+        result = await outreachClient.createCampaignWithProspects(args);
+        break;
+
       // === BULK OPERATIONS (New Enhanced Features) ===
       case 'bulk_create_prospects':
         result = await outreachClient.bulkCreateProspects(args.prospects, args.options);

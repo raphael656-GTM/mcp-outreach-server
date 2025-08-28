@@ -446,6 +446,251 @@ class EnhancedOutreachClient {
     }
   }
 
+  // ===== HIGH-LEVEL WORKFLOW METHODS =====
+
+  // Create complete email sequence with templates and steps in one call
+  async createCompleteEmailSequence(data) {
+    try {
+      console.error(`🎯 Creating complete email sequence: ${data.sequenceName}`);
+      
+      const results = {
+        sequence: null,
+        templates: [],
+        steps: [],
+        links: [],
+        summary: {
+          sequenceName: data.sequenceName,
+          emailCount: data.emails.length,
+          success: false,
+          errors: []
+        }
+      };
+
+      // Step 1: Check if sequence already exists
+      try {
+        const existing = await this.findSequence(data.sequenceName);
+        if (existing.data && existing.data.length > 0) {
+          throw new Error(`Sequence "${data.sequenceName}" already exists`);
+        }
+      } catch (error) {
+        // If find fails, that's ok - sequence doesn't exist
+        if (!error.message.includes('already exists')) {
+          console.error('Warning: Could not check for existing sequence:', error.message);
+        } else {
+          throw error;
+        }
+      }
+
+      // Step 2: Create the main sequence
+      const sequenceData = {
+        name: data.sequenceName,
+        description: data.description,
+        tags: data.tags || [],
+        shareType: 'shared'
+      };
+      
+      results.sequence = await this.createSequence(sequenceData);
+      const sequenceId = results.sequence.data.id.toString();
+      
+      console.error(`✅ Created sequence ID: ${sequenceId}`);
+
+      // Step 3: Create all email templates
+      for (let i = 0; i < data.emails.length; i++) {
+        const email = data.emails[i];
+        
+        const templateData = {
+          name: email.templateName,
+          subject: email.subject,
+          bodyHtml: email.bodyHtml,
+          tags: email.tags || [],
+          trackLinks: true,
+          trackOpens: true
+        };
+        
+        const template = await this.createSequenceTemplate(templateData);
+        results.templates.push(template);
+        console.error(`✅ Created template ${i + 1}: ${template.data.id}`);
+      }
+
+      // Step 4: Create sequence steps with proper timing
+      for (let i = 0; i < data.emails.length; i++) {
+        const email = data.emails[i];
+        
+        const stepData = {
+          sequenceId: sequenceId,
+          stepType: 'auto_email',
+          order: i + 1,
+          intervalInDays: email.intervalInDays
+        };
+        
+        const step = await this.createSequenceStep(stepData);
+        results.steps.push(step);
+        console.error(`✅ Created step ${i + 1}: ${step.data.id}`);
+      }
+
+      // Step 5: Link templates to steps
+      for (let i = 0; i < results.templates.length; i++) {
+        const templateId = results.templates[i].data.id.toString();
+        const stepId = results.steps[i].data.id.toString();
+        
+        const link = await this.linkTemplateToStep(stepId, templateId);
+        results.links.push(link);
+        console.error(`✅ Linked template ${i + 1} to step ${i + 1}`);
+      }
+
+      results.summary.success = true;
+      console.error(`🎉 Complete sequence created successfully: ${data.emails.length} emails, ${results.steps.length} steps`);
+      
+      return results;
+
+    } catch (error) {
+      console.error(`❌ Failed to create complete email sequence: ${error.message}`);
+      throw new Error(`Failed to create complete email sequence: ${error.message}`);
+    }
+  }
+
+  // Create prospect and immediately enroll in sequence
+  async createAndEnrollProspect(data) {
+    try {
+      console.error(`👤 Creating and enrolling prospect: ${data.prospect.firstName} ${data.prospect.lastName}`);
+      
+      const results = {
+        prospect: null,
+        sequence: null,
+        enrollment: null,
+        summary: {
+          prospectEmail: data.prospect.email,
+          sequenceName: data.sequenceName,
+          success: false
+        }
+      };
+
+      // Step 1: Find the sequence
+      const sequenceResults = await this.findSequence(data.sequenceName);
+      if (!sequenceResults.data || sequenceResults.data.length === 0) {
+        throw new Error(`Sequence "${data.sequenceName}" not found`);
+      }
+      
+      results.sequence = sequenceResults.data[0];
+      const sequenceId = results.sequence.id.toString();
+      console.error(`✅ Found sequence ID: ${sequenceId}`);
+
+      // Step 2: Create the prospect
+      results.prospect = await this.createProspect(data.prospect);
+      const prospectId = results.prospect.data.id.toString();
+      console.error(`✅ Created prospect ID: ${prospectId}`);
+
+      // Step 3: Enroll prospect in sequence
+      const enrollmentOptions = data.options || {};
+      results.enrollment = await this.addProspectToSequence(prospectId, sequenceId, enrollmentOptions);
+      console.error(`✅ Enrolled prospect in sequence`);
+
+      results.summary.success = true;
+      console.error(`🎉 Prospect created and enrolled successfully`);
+      
+      return results;
+
+    } catch (error) {
+      console.error(`❌ Failed to create and enroll prospect: ${error.message}`);
+      throw new Error(`Failed to create and enroll prospect: ${error.message}`);
+    }
+  }
+
+  // Create complete campaign with sequence, templates, and prospects
+  async createCampaignWithProspects(data) {
+    try {
+      console.error(`🚀 Creating complete campaign: ${data.sequenceName} with ${data.prospects.length} prospects`);
+      
+      const results = {
+        sequence: null,
+        templates: [],
+        steps: [],
+        links: [],
+        prospects: {
+          successful: [],
+          failed: []
+        },
+        enrollments: {
+          successful: [],
+          failed: []
+        },
+        summary: {
+          sequenceName: data.sequenceName,
+          emailCount: data.emails.length,
+          prospectCount: data.prospects.length,
+          success: false,
+          prospectsCreated: 0,
+          prospectsEnrolled: 0
+        }
+      };
+
+      // Step 1: Create the complete email sequence
+      console.error(`📧 Creating email sequence...`);
+      const sequenceResults = await this.createCompleteEmailSequence({
+        sequenceName: data.sequenceName,
+        description: data.description,
+        tags: data.tags,
+        emails: data.emails
+      });
+      
+      results.sequence = sequenceResults.sequence;
+      results.templates = sequenceResults.templates;
+      results.steps = sequenceResults.steps;
+      results.links = sequenceResults.links;
+      
+      const sequenceId = results.sequence.data.id.toString();
+      console.error(`✅ Email sequence created with ID: ${sequenceId}`);
+
+      // Step 2: Bulk create prospects
+      console.error(`👥 Creating ${data.prospects.length} prospects...`);
+      const prospectResults = await this.bulkCreateProspects(data.prospects, {
+        batchSize: 25,
+        continueOnError: true
+      });
+      
+      results.prospects = prospectResults;
+      results.summary.prospectsCreated = prospectResults.successful.length;
+      console.error(`✅ Created ${prospectResults.successful.length}/${data.prospects.length} prospects`);
+
+      // Step 3: Bulk enroll successful prospects
+      if (prospectResults.successful.length > 0) {
+        console.error(`📬 Enrolling ${prospectResults.successful.length} prospects in sequence...`);
+        
+        const enrollmentData = prospectResults.successful.map(prospect => ({
+          prospectId: prospect.data.id.toString(),
+          sequenceId: sequenceId
+        }));
+
+        const enrollmentResults = await this.bulkEnrollProspects(enrollmentData);
+        results.enrollments = enrollmentResults;
+        results.summary.prospectsEnrolled = enrollmentResults.successful.length;
+        console.error(`✅ Enrolled ${enrollmentResults.successful.length}/${prospectResults.successful.length} prospects`);
+      }
+
+      results.summary.success = true;
+      console.error(`🎉 Complete campaign created: ${results.summary.prospectsEnrolled} prospects enrolled in ${data.emails.length}-email sequence`);
+      
+      return results;
+
+    } catch (error) {
+      console.error(`❌ Failed to create complete campaign: ${error.message}`);
+      throw new Error(`Failed to create complete campaign: ${error.message}`);
+    }
+  }
+
+  // Helper method to find sequence by name (used by workflows)
+  async findSequence(name) {
+    try {
+      const params = new URLSearchParams();
+      params.append('filter[name]', name);
+      
+      const response = await this.makeApiCall('GET', `/sequences?${params.toString()}`, null, true);
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to find sequence: ${error.message}`);
+    }
+  }
+
   // ===== MONITORING AND HEALTH =====
 
   // Get comprehensive health status

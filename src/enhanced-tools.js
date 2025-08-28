@@ -1,6 +1,141 @@
 // Enhanced Tool definitions for MCP Outreach server with bulk operations
 
 export const enhancedTools = [
+  // ===== HIGH-LEVEL WORKFLOW TOOLS (Seamless User Experience) =====
+  
+  {
+    name: 'create_complete_email_sequence',
+    description: 'Create a complete email sequence with templates and timing in one call - no need for multiple steps',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sequenceName: {
+          type: 'string',
+          description: 'Name of the sequence (e.g., "TechCorp - Security Platform - Steve Jobs Style")'
+        },
+        description: {
+          type: 'string', 
+          description: 'Description of the sequence purpose and target audience'
+        },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Tags for organizing the sequence (e.g., ["security", "enterprise", "cold outreach"])'
+        },
+        emails: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              templateName: { type: 'string', description: 'Name of the email template' },
+              subject: { type: 'string', description: 'Email subject line with personalization variables' },
+              bodyHtml: { type: 'string', description: 'HTML email content with {{first_name}} and {{account.name}} variables' },
+              tags: { type: 'array', items: { type: 'string' }, description: 'Tags for this specific email' },
+              intervalInDays: { type: 'number', description: 'Days to wait before sending this email (0 for first email)' }
+            },
+            required: ['templateName', 'subject', 'bodyHtml', 'intervalInDays']
+          },
+          minItems: 1,
+          maxItems: 10,
+          description: 'Array of email templates with timing'
+        }
+      },
+      required: ['sequenceName', 'description', 'emails']
+    }
+  },
+
+  {
+    name: 'create_and_enroll_prospect',
+    description: 'Create a prospect and immediately enroll them in a sequence - combines two steps into one',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prospect: {
+          type: 'object',
+          properties: {
+            firstName: { type: 'string', description: 'Prospect first name' },
+            lastName: { type: 'string', description: 'Prospect last name' },
+            email: { type: 'string', description: 'Prospect email address' },
+            company: { type: 'string', description: 'Company name' },
+            title: { type: 'string', description: 'Job title' },
+            tags: { type: 'array', items: { type: 'string' } },
+            customFields: { type: 'object' }
+          },
+          required: ['firstName', 'lastName', 'email']
+        },
+        sequenceName: {
+          type: 'string',
+          description: 'Name of the sequence to enroll prospect in'
+        },
+        options: {
+          type: 'object',
+          properties: {
+            mailboxId: { type: 'string', description: 'ID of mailbox to use for sending (optional)' }
+          }
+        }
+      },
+      required: ['prospect', 'sequenceName']
+    }
+  },
+
+  {
+    name: 'create_campaign_with_prospects',
+    description: 'Create complete campaign: sequence with emails + prospects + enrollment - full campaign setup in one call',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sequenceName: {
+          type: 'string',
+          description: 'Name of the sequence/campaign'
+        },
+        description: {
+          type: 'string',
+          description: 'Campaign description and target audience'
+        },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Campaign tags for organization'
+        },
+        emails: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              templateName: { type: 'string' },
+              subject: { type: 'string' },
+              bodyHtml: { type: 'string' },
+              tags: { type: 'array', items: { type: 'string' } },
+              intervalInDays: { type: 'number' }
+            },
+            required: ['templateName', 'subject', 'bodyHtml', 'intervalInDays']
+          },
+          minItems: 1,
+          maxItems: 10
+        },
+        prospects: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              firstName: { type: 'string' },
+              lastName: { type: 'string' },
+              email: { type: 'string' },
+              company: { type: 'string' },
+              title: { type: 'string' },
+              tags: { type: 'array', items: { type: 'string' } }
+            },
+            required: ['firstName', 'lastName', 'email']
+          },
+          minItems: 1,
+          maxItems: 100,
+          description: 'List of prospects to create and enroll'
+        }
+      },
+      required: ['sequenceName', 'description', 'emails', 'prospects']
+    }
+  },
+
   // ===== BULK OPERATIONS (New Performance Tools) =====
   
   {
