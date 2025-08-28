@@ -31,8 +31,18 @@ const TOKEN_URL = 'https://api.outreach.io/oauth/token';
 // Required scopes for our MCP server
 const SCOPES = [
   'accounts.read',
-  'prospects.read', 
+  'accounts.write',
+  'prospects.read',
+  'prospects.write', 
   'sequences.read',
+  'sequences.write',
+  'sequenceSteps.read',
+  'sequenceSteps.write',
+  'sequenceTemplates.read',
+  'sequenceTemplates.write',
+  'templates.read',
+  'templates.write',
+  'mailboxes.read',
   'users.read'
 ].join(' ');
 

@@ -65,9 +65,21 @@ function initializeMCPServer() {
   if (mcpProcess) return mcpProcess;
   
   console.log('🚀 Starting MCP Outreach server...');
+  console.log('📋 Environment check:');
+  console.log('  - OUTREACH_CLIENT_ID:', process.env.OUTREACH_CLIENT_ID ? '✅ Set' : '❌ Missing');
+  console.log('  - OUTREACH_CLIENT_SECRET:', process.env.OUTREACH_CLIENT_SECRET ? '✅ Set' : '❌ Missing');
+  console.log('  - OUTREACH_REFRESH_TOKEN:', process.env.OUTREACH_REFRESH_TOKEN ? '✅ Set' : '❌ Missing');
   
   mcpProcess = spawn('node', ['dist/index.js'], {
-    stdio: ['pipe', 'pipe', 'pipe']
+    stdio: ['pipe', 'pipe', 'pipe'],
+    env: {
+      ...process.env,
+      OUTREACH_CLIENT_ID: process.env.OUTREACH_CLIENT_ID,
+      OUTREACH_CLIENT_SECRET: process.env.OUTREACH_CLIENT_SECRET,
+      OUTREACH_REFRESH_TOKEN: process.env.OUTREACH_REFRESH_TOKEN,
+      OUTREACH_REDIRECT_URI: process.env.OUTREACH_REDIRECT_URI,
+      OUTREACH_API_BASE_URL: process.env.OUTREACH_API_BASE_URL || 'https://api.outreach.io/api/v2'
+    }
   });
 
   mcpProcess.stdout.on('data', (data) => {
