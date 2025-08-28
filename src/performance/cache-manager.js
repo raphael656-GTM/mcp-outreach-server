@@ -45,7 +45,7 @@ class CacheManager {
   setupEventListeners() {
     [this.oauthCache, this.apiCache, this.dataCache].forEach(cache => {
       cache.on('expired', (key, value) => {
-        console.log(`🗑️ Cache expired: ${key}`);
+        console.error(`🗑️ Cache expired: ${key}`);
       });
 
       cache.on('del', (key, value) => {
@@ -62,7 +62,7 @@ class CacheManager {
   setOAuthToken(key, tokenData) {
     const cacheKey = `oauth:${key}`;
     this.oauthCache.set(cacheKey, tokenData, this.ttl.oauth_token);
-    console.log(`🔐 OAuth token cached: ${key}`);
+    console.error(`🔐 OAuth token cached: ${key}`);
   }
 
   getOAuthToken(key) {
@@ -70,11 +70,11 @@ class CacheManager {
     const token = this.oauthCache.get(cacheKey);
     if (token) {
       this.stats.hits++;
-      console.log(`✅ OAuth token cache hit: ${key}`);
+      console.error(`✅ OAuth token cache hit: ${key}`);
       return token;
     }
     this.stats.misses++;
-    console.log(`❌ OAuth token cache miss: ${key}`);
+    console.error(`❌ OAuth token cache miss: ${key}`);
     return null;
   }
 
@@ -82,7 +82,7 @@ class CacheManager {
   setApiResponse(endpoint, params, data) {
     const cacheKey = this.generateApiKey(endpoint, params);
     this.apiCache.set(cacheKey, data, this.ttl.api_response);
-    console.log(`💾 API response cached: ${endpoint}`);
+    console.error(`💾 API response cached: ${endpoint}`);
   }
 
   getApiResponse(endpoint, params) {
@@ -90,7 +90,7 @@ class CacheManager {
     const data = this.apiCache.get(cacheKey);
     if (data) {
       this.stats.hits++;
-      console.log(`✅ API cache hit: ${endpoint}`);
+      console.error(`✅ API cache hit: ${endpoint}`);
       return data;
     }
     this.stats.misses++;
@@ -157,7 +157,7 @@ class CacheManager {
   // Cache Management
   invalidateApiCache() {
     this.apiCache.flushAll();
-    console.log('🗑️ API cache invalidated');
+    console.error('🗑️ API cache invalidated');
   }
 
   invalidateProspectCache(prospectId = null) {
@@ -204,7 +204,7 @@ class CacheManager {
     this.oauthCache.close();
     this.apiCache.close();
     this.dataCache.close();
-    console.log('✅ Cache manager closed');
+    console.error('✅ Cache manager closed');
   }
 }
 

@@ -19,7 +19,7 @@ class BulkOperationsManager {
 
   // Bulk create prospects with error handling
   async bulkCreateProspects(prospectsData, options = {}) {
-    console.log(`📦 Starting bulk prospect creation: ${prospectsData.length} prospects`);
+    console.error(`📦 Starting bulk prospect creation: ${prospectsData.length} prospects`);
     
     const results = {
       successful: [],
@@ -34,7 +34,7 @@ class BulkOperationsManager {
 
     // Split into batches
     const batches = this.createBatches(prospectsData, this.batchSize);
-    console.log(`🔄 Processing ${batches.length} batches of ${this.batchSize} prospects each`);
+    console.error(`🔄 Processing ${batches.length} batches of ${this.batchSize} prospects each`);
 
     // Process batches with limited parallelism
     for (let i = 0; i < batches.length; i += this.parallelLimit) {
@@ -66,7 +66,7 @@ class BulkOperationsManager {
     results.summary.succeeded = results.successful.length;
     results.summary.failed = results.failed.length;
 
-    console.log(`✅ Bulk prospect creation complete: ${results.summary.succeeded}/${results.summary.total} successful`);
+    console.error(`✅ Bulk prospect creation complete: ${results.summary.succeeded}/${results.summary.total} successful`);
     return results;
   }
 
@@ -75,7 +75,7 @@ class BulkOperationsManager {
     const results = { successful: [], failed: [] };
 
     try {
-      console.log(`⚡ Processing batch ${batchIndex + 1}: ${batch.length} items (attempt ${attempt})`);
+      console.error(`⚡ Processing batch ${batchIndex + 1}: ${batch.length} items (attempt ${attempt})`);
 
       for (const item of batch) {
         try {
@@ -125,7 +125,7 @@ class BulkOperationsManager {
 
       // Retry logic for entire batch
       if (attempt < this.maxRetries) {
-        console.log(`🔄 Retrying batch ${batchIndex + 1} in ${this.retryDelay}ms (attempt ${attempt + 1})`);
+        console.error(`🔄 Retrying batch ${batchIndex + 1} in ${this.retryDelay}ms (attempt ${attempt + 1})`);
         this.stats.retriedOperations++;
         
         await delay(this.retryDelay * attempt); // Exponential backoff
@@ -148,7 +148,7 @@ class BulkOperationsManager {
 
   // Bulk create sequences
   async bulkCreateSequences(sequencesData, options = {}) {
-    console.log(`📦 Starting bulk sequence creation: ${sequencesData.length} sequences`);
+    console.error(`📦 Starting bulk sequence creation: ${sequencesData.length} sequences`);
     
     const batches = this.createBatches(sequencesData, Math.min(this.batchSize, 10)); // Smaller batches for sequences
     const results = { successful: [], failed: [], summary: { total: sequencesData.length, succeeded: 0, failed: 0 } };
@@ -164,13 +164,13 @@ class BulkOperationsManager {
     results.summary.succeeded = results.successful.length;
     results.summary.failed = results.failed.length;
 
-    console.log(`✅ Bulk sequence creation complete: ${results.summary.succeeded}/${results.summary.total} successful`);
+    console.error(`✅ Bulk sequence creation complete: ${results.summary.succeeded}/${results.summary.total} successful`);
     return results;
   }
 
   // Bulk create templates
   async bulkCreateTemplates(templatesData, options = {}) {
-    console.log(`📦 Starting bulk template creation: ${templatesData.length} templates`);
+    console.error(`📦 Starting bulk template creation: ${templatesData.length} templates`);
     
     const batches = this.createBatches(templatesData, Math.min(this.batchSize, 15));
     const results = { successful: [], failed: [], summary: { total: templatesData.length, succeeded: 0, failed: 0 } };
@@ -186,13 +186,13 @@ class BulkOperationsManager {
     results.summary.succeeded = results.successful.length;
     results.summary.failed = results.failed.length;
 
-    console.log(`✅ Bulk template creation complete: ${results.summary.succeeded}/${results.summary.total} successful`);
+    console.error(`✅ Bulk template creation complete: ${results.summary.succeeded}/${results.summary.total} successful`);
     return results;
   }
 
   // Bulk enroll prospects in sequences
   async bulkEnrollProspects(enrollmentData, options = {}) {
-    console.log(`📦 Starting bulk prospect enrollment: ${enrollmentData.length} enrollments`);
+    console.error(`📦 Starting bulk prospect enrollment: ${enrollmentData.length} enrollments`);
     
     const results = { successful: [], failed: [], summary: { total: enrollmentData.length, succeeded: 0, failed: 0 } };
     
@@ -236,7 +236,7 @@ class BulkOperationsManager {
     results.summary.succeeded = results.successful.length;
     results.summary.failed = results.failed.length;
 
-    console.log(`✅ Bulk enrollment complete: ${results.summary.succeeded}/${results.summary.total} successful`);
+    console.error(`✅ Bulk enrollment complete: ${results.summary.succeeded}/${results.summary.total} successful`);
     return results;
   }
 

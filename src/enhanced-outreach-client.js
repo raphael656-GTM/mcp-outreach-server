@@ -93,7 +93,7 @@ class EnhancedOutreachClient {
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
           try {
-            console.log('🔄 Refreshing token due to 401 error...');
+            console.error('🔄 Refreshing token due to 401 error...');
             const token = await this.oauthManager.refreshAccessToken();
             originalRequest.headers['Authorization'] = `Bearer ${token}`;
             return this.client(originalRequest);
@@ -107,7 +107,7 @@ class EnhancedOutreachClient {
       }
     );
 
-    console.log('✅ Enhanced Outreach Client initialized with performance optimizations');
+    console.error('✅ Enhanced Outreach Client initialized with performance optimizations');
   }
 
   // Extract tool name from URL for monitoring
@@ -134,7 +134,7 @@ class EnhancedOutreachClient {
     if (useCache && method === 'GET') {
       const cached = this.cacheManager.getApiResponse(endpoint, data);
       if (cached) {
-        console.log(`🎯 Cache hit for ${endpoint}`);
+        console.error(`🎯 Cache hit for ${endpoint}`);
         return cached;
       }
     }
@@ -176,25 +176,25 @@ class EnhancedOutreachClient {
 
   // Bulk create prospects
   async bulkCreateProspects(prospectsData, options = {}) {
-    console.log(`📦 Bulk creating ${prospectsData.length} prospects...`);
+    console.error(`📦 Bulk creating ${prospectsData.length} prospects...`);
     return await this.bulkOps.bulkCreateProspects(prospectsData, options);
   }
 
   // Bulk create sequences
   async bulkCreateSequences(sequencesData, options = {}) {
-    console.log(`📦 Bulk creating ${sequencesData.length} sequences...`);
+    console.error(`📦 Bulk creating ${sequencesData.length} sequences...`);
     return await this.bulkOps.bulkCreateSequences(sequencesData, options);
   }
 
   // Bulk create templates
   async bulkCreateTemplates(templatesData, options = {}) {
-    console.log(`📦 Bulk creating ${templatesData.length} templates...`);
+    console.error(`📦 Bulk creating ${templatesData.length} templates...`);
     return await this.bulkOps.bulkCreateTemplates(templatesData, options);
   }
 
   // Bulk enroll prospects
   async bulkEnrollProspects(enrollmentData, options = {}) {
-    console.log(`📦 Bulk enrolling ${enrollmentData.length} prospects...`);
+    console.error(`📦 Bulk enrolling ${enrollmentData.length} prospects...`);
     return await this.bulkOps.bulkEnrollProspects(enrollmentData, options);
   }
 
@@ -479,7 +479,7 @@ class EnhancedOutreachClient {
 
   // Cleanup method
   async shutdown() {
-    console.log('🔄 Shutting down Enhanced Outreach Client...');
+    console.error('🔄 Shutting down Enhanced Outreach Client...');
     
     if (this.oauthManager) {
       this.oauthManager.destroy();
@@ -497,7 +497,7 @@ class EnhancedOutreachClient {
       this.performanceMonitor.destroy();
     }
     
-    console.log('✅ Enhanced Outreach Client shutdown complete');
+    console.error('✅ Enhanced Outreach Client shutdown complete');
   }
 }
 

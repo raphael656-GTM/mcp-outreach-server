@@ -58,9 +58,9 @@ class ConnectionPoolManager {
 
   // Graceful shutdown
   async shutdown() {
-    console.log('🔌 Shutting down connection pool...');
+    console.error('🔌 Shutting down connection pool...');
     this.httpAgent.destroy();
-    console.log('✅ Connection pool shutdown complete');
+    console.error('✅ Connection pool shutdown complete');
   }
 
   // Health check for connection pool

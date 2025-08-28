@@ -27,7 +27,7 @@ class PerformanceMonitor {
       this.updateSystemMetrics();
     }, 30000); // Every 30 seconds
 
-    console.log('📊 Performance monitoring started');
+    console.error('📊 Performance monitoring started');
   }
 
   // Update system metrics
@@ -252,7 +252,7 @@ class PerformanceMonitor {
         cpuUsage: process.cpuUsage()
       }
     };
-    console.log('📊 Performance metrics reset');
+    console.error('📊 Performance metrics reset');
   }
 
   // Cleanup
@@ -261,7 +261,7 @@ class PerformanceMonitor {
       clearInterval(this.systemInterval);
       this.systemInterval = null;
     }
-    console.log('📊 Performance monitor cleanup complete');
+    console.error('📊 Performance monitor cleanup complete');
   }
 }
 

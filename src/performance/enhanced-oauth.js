@@ -37,14 +37,14 @@ class EnhancedOAuthManager {
       this.checkAndRefreshToken();
     }, 5 * 60 * 1000);
 
-    console.log('🔄 Proactive OAuth token refresh monitoring started');
+    console.error('🔄 Proactive OAuth token refresh monitoring started');
   }
 
   // Check if token needs refreshing and refresh if necessary
   async checkAndRefreshToken() {
     try {
       if (this.needsRefresh()) {
-        console.log('🔄 Proactive token refresh triggered');
+        console.error('🔄 Proactive token refresh triggered');
         await this.refreshAccessToken();
         this.stats.proactiveRefreshes++;
       }
@@ -66,12 +66,12 @@ class EnhancedOAuthManager {
   // Enhanced token refresh with retry logic and caching
   async refreshAccessToken(attempt = 1) {
     try {
-      console.log(`🔑 Refreshing OAuth token (attempt ${attempt})...`);
+      console.error(`🔑 Refreshing OAuth token (attempt ${attempt})...`);
 
       // Check cache first
       const cachedToken = this.cacheManager?.getOAuthToken('access_token');
       if (cachedToken && !this.isTokenExpired(cachedToken)) {
-        console.log('✅ Using cached access token');
+        console.error('✅ Using cached access token');
         this.accessToken = cachedToken.access_token;
         this.tokenExpiry = cachedToken.expiry;
         this.stats.cacheHits++;
@@ -122,12 +122,12 @@ class EnhancedOAuthManager {
       }
 
       this.stats.tokenRefreshes++;
-      console.log(`✅ OAuth token refreshed successfully (expires in ${Math.round((this.tokenExpiry - Date.now()) / 1000 / 60)} minutes)`);
+      console.error(`✅ OAuth token refreshed successfully (expires in ${Math.round((this.tokenExpiry - Date.now()) / 1000 / 60)} minutes)`);
 
       // Log refresh token changes
       if (tokenData.refresh_token && tokenData.refresh_token !== this.refreshToken) {
-        console.log('🔄 New refresh token received - update your .env file');
-        console.log(`OUTREACH_REFRESH_TOKEN=${tokenData.refresh_token}`);
+        console.error('🔄 New refresh token received - update your .env file');
+        console.error(`OUTREACH_REFRESH_TOKEN=${tokenData.refresh_token}`);
       }
 
       return this.accessToken;
@@ -139,7 +139,7 @@ class EnhancedOAuthManager {
       // Retry logic with exponential backoff
       if (attempt < this.maxRetries) {
         const delayMs = this.retryDelay * Math.pow(2, attempt - 1);
-        console.log(`🔄 Retrying token refresh in ${delayMs}ms...`);
+        console.error(`🔄 Retrying token refresh in ${delayMs}ms...`);
         
         await delay(delayMs);
         return this.refreshAccessToken(attempt + 1);
@@ -227,7 +227,7 @@ class EnhancedOAuthManager {
       clearInterval(this.refreshInterval);
       this.refreshInterval = null;
     }
-    console.log('🔄 OAuth manager cleanup complete');
+    console.error('🔄 OAuth manager cleanup complete');
   }
 }
 
