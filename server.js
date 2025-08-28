@@ -312,30 +312,62 @@ app.post('/tools/call', async (req, res) => {
               if (parsed.id === request.id) {
                 clearTimeout(timeout);
                 mcpProcess.stdout.removeListener('data', onData);
+                
+                // Validate the response structure
+                if (!parsed.jsonrpc) {
+                  console.error('⚠️  Invalid response: missing jsonrpc field');
+                  parsed.jsonrpc = '2.0';
+                }
+                
+                // If it's an error response, make sure it's properly formatted
+                if (parsed.error) {
+                  if (typeof parsed.error === 'string') {
+                    parsed.error = {
+                      code: -32603,
+                      message: parsed.error
+                    };
+                  }
+                  if (!parsed.error.code) {
+                    parsed.error.code = -32603;
+                  }
+                  if (!parsed.error.message) {
+                    parsed.error.message = 'Unknown error';
+                  }
+                }
+                
                 resolve(parsed);
                 return;
               }
             } catch (e) {
-              // Skip non-JSON lines
+              console.error('⚠️  Failed to parse MCP response line:', line, e.message);
             }
           }
         } catch (e) {
-          // Ignore parsing errors
+          console.error('⚠️  Error processing MCP response data:', e.message);
         }
       };
       
       mcpProcess.stdout.on('data', onData);
     });
 
+    // Check if response is already an error and return it directly
+    if (response && response.error) {
+      console.log('📥 MCP subprocess returned error:', JSON.stringify(response, null, 2));
+      return res.json(response);
+    }
+    
     res.json(response);
   } catch (error) {
     console.error('❌ Tool call error:', error);
+    
+    // Create properly formatted JSON-RPC error
     const jsonRpcError = {
       jsonrpc: '2.0',
-      id: req.body?.name ? Date.now() : null,
+      id: req.body?.id || Date.now(),
       error: {
         code: -32603,
-        message: error.message
+        message: error.message || 'Internal server error',
+        data: { type: 'wrapper_error' }
       }
     };
     res.status(500).json(jsonRpcError);
