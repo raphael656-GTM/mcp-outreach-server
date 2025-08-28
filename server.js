@@ -22,7 +22,8 @@ app.use((req, res, next) => {
     '/callback',
     '/',
     '/auth',
-    '/auth/validate'
+    '/auth/validate',
+    '/claude-tools.json'
   ];
   
   if (openPaths.includes(req.path)) {
