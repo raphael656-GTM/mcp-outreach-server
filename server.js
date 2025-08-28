@@ -328,7 +328,73 @@ app.get('/health', (req, res) => {
 
 // Serve claude-tools.json for custom connector
 app.get('/claude-tools.json', (req, res) => {
-  res.sendFile('/Users/raphaelberrebi/mcp-outreach-server/claude-tools.json');
+  const tools = [
+    {
+      "name": "find_sequence",
+      "description": "Find existing sequences by name.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" }
+        },
+        "required": ["name"]
+      },
+      "api": {
+        "url": "https://mcp-outreach-server-production.up.railway.app/tools/call",
+        "method": "POST",
+        "headers": {
+          "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "find_sequence",
+          "arguments": "{{input}}"
+        }
+      }
+    },
+    {
+      "name": "get_sequences",
+      "description": "List all sequences.",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      },
+      "api": {
+        "url": "https://mcp-outreach-server-production.up.railway.app/tools/call",
+        "method": "POST",
+        "headers": {
+          "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "get_sequences",
+          "arguments": {}
+        }
+      }
+    },
+    {
+      "name": "health_check",
+      "description": "Check MCP server status.",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      },
+      "api": {
+        "url": "https://mcp-outreach-server-production.up.railway.app/tools/call",
+        "method": "POST",
+        "headers": {
+          "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "health_check",
+          "arguments": {}
+        }
+      }
+    }
+  ];
+  
+  res.json(tools);
 });
 
 // Root endpoint
