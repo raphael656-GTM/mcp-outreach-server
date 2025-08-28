@@ -23,7 +23,7 @@ app.use((req, res, next) => {
     '/',
     '/auth',
     '/auth/validate',
-    '/claude-tools.json'
+    '/mcp-server'
   ];
   
   if (openPaths.includes(req.path)) {
@@ -326,75 +326,88 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Serve claude-tools.json for custom connector
-app.get('/claude-tools.json', (req, res) => {
-  const tools = [
-    {
-      "name": "find_sequence",
-      "description": "Find existing sequences by name.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "name": { "type": "string" }
+// MCP Server endpoint for Claude Desktop remote connection
+app.use('/mcp-server', (req, res) => {
+  // Set MCP-specific headers
+  res.setHeader('Content-Type', 'application/vnd.modelcontextprotocol+json');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  if (req.method === 'GET') {
+    // Return MCP server info
+    return res.json({
+      jsonrpc: '2.0',
+      result: {
+        protocolVersion: '2024-11-05',
+        serverInfo: {
+          name: 'mcp-outreach-server',
+          version: '1.0.0'
         },
-        "required": ["name"]
-      },
-      "api": {
-        "url": "https://mcp-outreach-server-production.up.railway.app/tools/call",
-        "method": "POST",
-        "headers": {
-          "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "name": "find_sequence",
-          "arguments": "{{input}}"
+        capabilities: {
+          tools: {}
         }
       }
-    },
-    {
-      "name": "get_sequences",
-      "description": "List all sequences.",
-      "input_schema": {
-        "type": "object",
-        "properties": {}
-      },
-      "api": {
-        "url": "https://mcp-outreach-server-production.up.railway.app/tools/call",
-        "method": "POST",
-        "headers": {
-          "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
-          "Content-Type": "application/json"
+    });
+  }
+
+  if (req.method === 'POST') {
+    // Handle MCP requests - forward to internal MCP process
+    if (!mcpProcess || !isInitialized) {
+      return res.status(503).json({
+        jsonrpc: '2.0',
+        error: {
+          code: -1,
+          message: 'MCP server not initialized'
         },
-        "body": {
-          "name": "get_sequences",
-          "arguments": {}
-        }
-      }
-    },
-    {
-      "name": "health_check",
-      "description": "Check MCP server status.",
-      "input_schema": {
-        "type": "object",
-        "properties": {}
-      },
-      "api": {
-        "url": "https://mcp-outreach-server-production.up.railway.app/tools/call",
-        "method": "POST",
-        "headers": {
-          "x-api-key": "55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8",
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "name": "health_check",
-          "arguments": {}
-        }
-      }
+        id: req.body?.id || null
+      });
     }
-  ];
-  
-  res.json(tools);
+
+    // Forward the request to the MCP process
+    const request = req.body;
+    console.log('📥 MCP Remote Request:', JSON.stringify(request));
+
+    mcpProcess.stdin.write(JSON.stringify(request) + '\n');
+
+    // Wait for response
+    const timeout = setTimeout(() => {
+      res.status(504).json({
+        jsonrpc: '2.0',
+        error: {
+          code: -1,
+          message: 'Request timeout'
+        },
+        id: request?.id || null
+      });
+    }, 30000);
+
+    const onData = (data) => {
+      try {
+        const lines = data.toString().split('\n').filter(line => line.trim());
+        for (const line of lines) {
+          try {
+            const parsed = JSON.parse(line);
+            if (parsed.id === request.id) {
+              clearTimeout(timeout);
+              mcpProcess.stdout.removeListener('data', onData);
+              return res.json(parsed);
+            }
+          } catch (e) {
+            // Skip non-JSON lines
+          }
+        }
+      } catch (e) {
+        // Ignore parsing errors
+      }
+    };
+
+    mcpProcess.stdout.on('data', onData);
+  }
 });
 
 // Root endpoint
