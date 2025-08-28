@@ -281,6 +281,27 @@ class EnhancedOutreachClient {
       
       return response;
     } catch (error) {
+      // Enhanced error handling for sequence creation
+      if (error.response) {
+        const status = error.response.status;
+        const data = error.response.data;
+        
+        if (status === 422) {
+          // Validation errors
+          const validationErrors = data.errors?.map(err => err.detail).join(', ') || 'Validation failed';
+          throw new Error(`Sequence validation failed: ${validationErrors}`);
+        } else if (status === 409) {
+          // Conflict (sequence name already exists)
+          throw new Error(`Sequence name '${sequenceData.name}' already exists. Please choose a different name.`);
+        } else if (status === 401) {
+          throw new Error('Authentication failed. Please check your Outreach credentials.');
+        } else if (status === 403) {
+          throw new Error('Permission denied. You may not have rights to create sequences.');
+        }
+        
+        throw new Error(`Failed to create sequence (${status}): ${data.errors?.[0]?.detail || error.message}`);
+      }
+      
       throw new Error(`Failed to create sequence: ${error.message}`);
     }
   }

@@ -257,24 +257,63 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   } catch (error) {
     console.error(`❌ Error executing tool ${name}:`, error);
     
-    // Handle specific error types
-    if (error.response?.status === 401) {
+    // Handle Axios errors with detailed response information
+    if (error.response) {
+      const statusCode = error.response.status;
+      const responseData = error.response.data;
+      
+      if (statusCode === 401) {
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          'Authentication failed. Please check your Outreach API token.'
+        );
+      } else if (statusCode === 403) {
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          'Access denied. Please check your API permissions.'
+        );
+      } else if (statusCode === 429) {
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          'Rate limit exceeded. Please try again later.'
+        );
+      } else if (statusCode >= 400 && statusCode < 500) {
+        // Extract detailed error message from Outreach API response
+        const errorDetail = responseData?.errors?.[0]?.detail || 
+                           responseData?.message || 
+                           error.message;
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          `Bad request (${statusCode}): ${errorDetail}`
+        );
+      } else if (statusCode >= 500) {
+        const errorDetail = responseData?.errors?.[0]?.detail || 
+                           responseData?.message || 
+                           'Server error';
+        throw new McpError(
+          ErrorCode.InternalError,
+          `Outreach server error (${statusCode}): ${errorDetail}`
+        );
+      }
+    }
+
+    // Handle network/connection errors
+    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
       throw new McpError(
-        ErrorCode.InvalidRequest,
-        'Authentication failed. Please check your Outreach credentials.'
-      );
-    } else if (error.response?.status === 403) {
-      throw new McpError(
-        ErrorCode.InvalidRequest,
-        'Access forbidden. Please check your Outreach permissions.'
-      );
-    } else if (error.response?.status === 429) {
-      throw new McpError(
-        ErrorCode.InvalidRequest,
-        'Rate limit exceeded. Please try again later.'
+        ErrorCode.InternalError,
+        'Cannot connect to Outreach API. Please check your network connection.'
       );
     }
 
+    // Handle timeout errors
+    if (error.code === 'ETIMEDOUT') {
+      throw new McpError(
+        ErrorCode.InternalError,
+        'Request to Outreach API timed out. Please try again.'
+      );
+    }
+
+    // Default error handling
     throw new McpError(
       ErrorCode.InternalError,
       `Error executing ${name}: ${error.message}`
