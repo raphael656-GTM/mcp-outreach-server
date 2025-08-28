@@ -141,10 +141,16 @@ function initializeMCPServer() {
 app.post('/mcp', async (req, res) => {
   try {
     if (!mcpProcess || !isInitialized) {
-      return res.status(503).json({ 
-        error: 'MCP server not initialized',
-        message: 'Server is starting up, please try again in a moment'
-      });
+      const jsonRpcError = {
+        jsonrpc: '2.0',
+        id: req.body?.id || null,
+        error: {
+          code: -32002,
+          message: 'MCP server not initialized',
+          data: { details: 'Server is starting up, please try again in a moment' }
+        }
+      };
+      return res.status(503).json(jsonRpcError);
     }
 
     const request = req.body;
@@ -180,10 +186,16 @@ app.post('/mcp', async (req, res) => {
     res.json(response);
   } catch (error) {
     console.error('❌ MCP Request error:', error);
-    res.status(500).json({ 
-      error: error.message,
-      type: 'mcp_error'
-    });
+    const jsonRpcError = {
+      jsonrpc: '2.0',
+      id: req.body?.id || null,
+      error: {
+        code: -32603,
+        message: error.message,
+        data: { type: 'mcp_error' }
+      }
+    };
+    res.status(500).json(jsonRpcError);
   }
 });
 
@@ -191,10 +203,16 @@ app.post('/mcp', async (req, res) => {
 app.get('/tools', async (req, res) => {
   try {
     if (!mcpProcess || !isInitialized) {
-      return res.status(503).json({ 
-        error: 'MCP server not initialized',
-        message: 'Server is starting up, please try again in a moment'
-      });
+      const jsonRpcError = {
+        jsonrpc: '2.0',
+        id: null,
+        error: {
+          code: -32002,
+          message: 'MCP server not initialized',
+          data: { details: 'Server is starting up, please try again in a moment' }
+        }
+      };
+      return res.status(503).json(jsonRpcError);
     }
 
     const request = {
@@ -239,7 +257,15 @@ app.get('/tools', async (req, res) => {
     res.json(response);
   } catch (error) {
     console.error('❌ Tools request error:', error);
-    res.status(500).json({ error: error.message });
+    const jsonRpcError = {
+      jsonrpc: '2.0',
+      id: null,
+      error: {
+        code: -32603,
+        message: error.message
+      }
+    };
+    res.status(500).json(jsonRpcError);
   }
 });
 
@@ -247,10 +273,16 @@ app.get('/tools', async (req, res) => {
 app.post('/tools/call', async (req, res) => {
   try {
     if (!mcpProcess || !isInitialized) {
-      return res.status(503).json({ 
-        error: 'MCP server not initialized',
-        message: 'Server is starting up, please try again in a moment'
-      });
+      const jsonRpcError = {
+        jsonrpc: '2.0',
+        id: req.body?.name ? Date.now() : null,
+        error: {
+          code: -32002,
+          message: 'MCP server not initialized',
+          data: { details: 'Server is starting up, please try again in a moment' }
+        }
+      };
+      return res.status(503).json(jsonRpcError);
     }
 
     const { name, arguments: args = {} } = req.body;
@@ -298,7 +330,15 @@ app.post('/tools/call', async (req, res) => {
     res.json(response);
   } catch (error) {
     console.error('❌ Tool call error:', error);
-    res.status(500).json({ error: error.message });
+    const jsonRpcError = {
+      jsonrpc: '2.0',
+      id: req.body?.name ? Date.now() : null,
+      error: {
+        code: -32603,
+        message: error.message
+      }
+    };
+    res.status(500).json(jsonRpcError);
   }
 });
 
