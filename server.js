@@ -325,6 +325,11 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Serve claude-tools.json for custom connector
+app.get('/claude-tools.json', (req, res) => {
+  res.sendFile('/Users/raphaelberrebi/mcp-outreach-server/claude-tools.json');
+});
+
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
@@ -335,7 +340,8 @@ app.get('/', (req, res) => {
       tools: '/tools - GET - List available tools',
       'tools/call': '/tools/call - POST - Call a tool',
       callback: '/callback - OAuth callback',
-      health: '/health - Health check'
+      health: '/health - Health check',
+      'claude-tools': '/claude-tools.json - Custom connector JSON'
     }
   });
 });
