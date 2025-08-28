@@ -26,6 +26,11 @@ app.use((req, res, next) => {
     '/mcp-server'
   ];
   
+  // Allow MCP OAuth endpoints
+  if (req.path.startsWith('/api/organizations/') && req.path.includes('/mcp/')) {
+    return next();
+  }
+  
   if (openPaths.includes(req.path)) {
     return next();
   }
@@ -37,23 +42,46 @@ app.use((req, res, next) => {
   return res.status(401).json({ error: 'Unauthorized: Invalid API key' });
 });
 
-// Add Claude connector auth endpoints
+// MCP OAuth endpoints for Claude Desktop
+app.get('/api/organizations/:orgId/mcp/start-auth/:serverId', (req, res) => {
+  const { orgId, serverId } = req.params;
+  const { redirect_url } = req.query;
+  
+  console.log('🔐 MCP OAuth start requested:', { orgId, serverId, redirect_url });
+  
+  // Return success - no additional auth needed since we use API key
+  res.json({
+    status: 'success',
+    message: 'No additional authentication required',
+    redirect_url: redirect_url || 'claude://claude.ai/new'
+  });
+});
+
+app.post('/api/organizations/:orgId/mcp/complete-auth/:serverId', (req, res) => {
+  const { orgId, serverId } = req.params;
+  
+  console.log('🔐 MCP OAuth complete requested:', { orgId, serverId });
+  
+  // Return success
+  res.json({
+    status: 'authenticated',
+    server_id: serverId
+  });
+});
+
+// Add Claude connector auth endpoints (legacy)
 app.get('/auth', (req, res) => {
   res.json({
     name: "MCP Outreach Server",
     version: "1.0",
-    auth_type: "api_key",
-    auth_config: {
-      header_name: "x-api-key"
+    auth_type: "none",
+    capabilities: {
+      tools: {}
     }
   });
 });
 
 app.post('/auth/validate', (req, res) => {
-  const key = req.headers['x-api-key'];
-  if (!key || key !== API_KEY) {
-    return res.status(401).json({ error: 'Invalid API key' });
-  }
   res.json({ status: 'authenticated' });
 });
 
