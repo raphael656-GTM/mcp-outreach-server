@@ -15,31 +15,14 @@ app.use(cors());
 app.use(express.json());
 
 const API_KEY = '55d6900ec2fbe3804ba6904ddfb82dc1879cbf0ecdca85b5cc16b8ce964c74c8';
-// API key middleware (skip for health and OAuth callback routes)
+// API key middleware
 app.use((req, res, next) => {
   const openPaths = [
     '/health',
     '/callback',
     '/',
-  ];
-  if (openPaths.includes(req.path)) {
-    return next();
-  }
-  const key = req.headers['x-api-key'];
-  if (!API_KEY || key === API_KEY) {
-    return next();
-  }
-  return res.status(401).json({ error: 'Unauthorized: Invalid API key' });
-});
-
-// Update the openPaths array in the middleware
-app.use((req, res, next) => {
-  const openPaths = [
-    '/health',
-    '/callback',
-    '/',
-    '/auth',           // Add this
-    '/auth/validate'   // Add this
+    '/auth',
+    '/auth/validate'
   ];
   
   if (openPaths.includes(req.path)) {
