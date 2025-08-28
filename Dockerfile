@@ -11,6 +11,7 @@ RUN npm ci --only=production && npm cache clean --force
 
 # Copy source code
 COPY src/ src/
+COPY server.js ./
 COPY .env.example ./
 
 # Create non-root user
@@ -29,4 +30,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "try { require('http').get('http://localhost:3000/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)); } catch(e) { process.exit(1); }"
 
 # Start the server
-CMD ["node", "src/index.js"]
+CMD ["node", "server.js"]
