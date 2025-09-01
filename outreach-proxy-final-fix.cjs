@@ -178,6 +178,84 @@ async function processRequest(request) {
             type: 'object',
             properties: {}
           }
+        },
+        {
+          name: 'list_sequences',
+          description: 'Enhanced sequence listing with analytics and performance data',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              limit: { type: 'number', description: 'Number of sequences to return', default: 50 },
+              offset: { type: 'number', description: 'Offset for pagination', default: 0 }
+            }
+          }
+        },
+        {
+          name: 'get_account_prospects',
+          description: 'Get prospects from a specific account',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              accountId: { type: 'number', description: 'ID of the account' },
+              accountName: { type: 'string', description: 'Name of the account (alternative to accountId)' },
+              limit: { type: 'number', description: 'Number of prospects to return', default: 100 }
+            }
+          }
+        },
+        {
+          name: 'search_accounts',
+          description: 'Search for accounts by name or domain',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              query: { type: 'string', description: 'Search query (name or domain)' },
+              limit: { type: 'number', description: 'Number of accounts to return', default: 20 }
+            },
+            required: ['query']
+          }
+        },
+        {
+          name: 'add_prospects_to_sequence',
+          description: 'Add prospects to a sequence',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              sequenceId: { type: 'number', description: 'ID of the sequence' },
+              prospectIds: { type: 'array', items: { type: 'number' }, description: 'Array of prospect IDs to add' },
+              mailboxId: { type: 'number', description: 'ID of the mailbox to use for sending' }
+            },
+            required: ['sequenceId', 'prospectIds']
+          }
+        },
+        {
+          name: 'create_sequence_step',
+          description: 'Add a step to a sequence',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              sequenceId: { type: 'number', description: 'ID of the sequence' },
+              order: { type: 'number', description: 'Order of the step in the sequence' },
+              interval: { type: 'number', description: 'Days to wait before this step', default: 1 },
+              stepType: { 
+                type: 'string', 
+                description: 'Type of step: auto_email, manual_email, call, task, linkedin_send_message',
+                enum: ['auto_email', 'manual_email', 'call', 'task', 'linkedin_send_message']
+              },
+              subject: { type: 'string', description: 'Email subject (for email steps)' },
+              body: { type: 'string', description: 'Content of the step' }
+            },
+            required: ['sequenceId', 'order', 'stepType']
+          }
+        },
+        {
+          name: 'get_mailboxes',
+          description: 'Get available mailboxes for sending emails',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              limit: { type: 'number', description: 'Number of mailboxes to return', default: 100 }
+            }
+          }
         }
       ];
 
