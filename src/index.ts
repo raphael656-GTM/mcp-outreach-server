@@ -12,6 +12,7 @@ import { OutreachClient } from './outreach-client.js';
 import { OutreachOAuth } from './oauth.js';
 import { MCPHealthMonitor } from './enterprise/health-monitor.js';
 import { config } from 'dotenv';
+import axios from 'axios';
 
 config();
 
@@ -51,33 +52,30 @@ async function initializeClient() {
     const redirectUri = process.env.OUTREACH_REDIRECT_URI || 'http://localhost:3000/callback';
     
     console.error('📋 Environment variables check:');
-    console.error(`  - CLIENT_ID: ${clientId ? '✅' : '❌'}`);
-    console.error(`  - CLIENT_SECRET: ${clientSecret ? '✅' : '❌'}`);
-    console.error(`  - REFRESH_TOKEN: ${refreshToken ? '✅' : '❌'}`);
+    console.error(`  - CLIENT_ID: ${clientId ? '✅' : '❌'} (${clientId ? clientId.substring(0, 20) + '...' : 'MISSING'})`);
+    console.error(`  - CLIENT_SECRET: ${clientSecret ? '✅' : '❌'} (${clientSecret ? clientSecret.substring(0, 10) + '...' : 'MISSING'})`);
+    console.error(`  - REFRESH_TOKEN: ${refreshToken ? '✅' : '❌'} (${refreshToken ? refreshToken.substring(0, 20) + '...' : 'MISSING'})`);
     console.error(`  - REDIRECT_URI: ${redirectUri}`);
     
     if (!clientId || !clientSecret || !refreshToken) {
       throw new Error('OUTREACH_CLIENT_ID, OUTREACH_CLIENT_SECRET, and OUTREACH_REFRESH_TOKEN environment variables are required.');
     }
 
-    console.error('🔐 Initializing OAuth client...');
-    // Initialize OAuth with config object and manually set refresh token
-    const oauth = new OutreachOAuth({
-      clientId,
-      clientSecret,
-      redirectUri,
-      scope: 'read write'
+    console.error('🔐 Refreshing OAuth token directly...');
+    // Use environment variable refresh token directly 
+    const tokenResponse = await axios.post('https://api.outreach.io/oauth/token', {
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token'
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
     });
     
-    console.error('🔄 Setting refresh token data...');
-    // Manually set the token data for refresh
-    (oauth as any).tokenData = {
-      refresh_token: refreshToken,
-      expires_at: 0 // Force refresh
-    };
-    
-    console.error('🔄 Attempting to refresh access token...');
-    const accessToken = await (oauth as any).refreshToken();
+    const accessToken = tokenResponse.data.access_token;
     console.error('✅ Access token obtained successfully');
     
     console.error('🌐 Initializing Outreach client...');

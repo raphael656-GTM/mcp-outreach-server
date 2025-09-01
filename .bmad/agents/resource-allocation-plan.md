@@ -1,56 +1,56 @@
 # Resource Allocation Plan
 
-Generated: 2025-09-01T11:41:17.441Z
+Generated: 2025-09-01T12:48:25.722Z
 
 ## Summary
 
-- **Total Projects:** 38
-- **Total Estimated Hours:** 272
+- **Total Projects:** 66
+- **Total Estimated Hours:** 414
 
 ## Priority Breakdown
 
-- **high  :** 8 projects
-- **low  :** 22 projects
-- **medium  :** 8 projects
+- **high  :** 10 projects
+- **low  :** 46 projects
+- **medium  :** 10 projects
 
 ## Timeline Analysis
 
 - **Shortest Project:** 1 days
 - **Longest Project:** 3 days  
-- **Average Project:** 2 days
-- **Sequential Execution:** 58 days
+- **Average Project:** 1 days
+- **Sequential Execution:** 91 days
 - **Parallel Execution:** 3 days
 
 ## Specialist Workload
 
 
 ### Full-Stack Developer
-- **Projects:** 38
-- **Total Hours:** 272
+- **Projects:** 66
+- **Total Hours:** 414
 - **High Priority:** 0
 - **Medium Priority:** 0  
 - **Low Priority:** 0
 
 
 ### API Integration Specialist
-- **Projects:** 4
-- **Total Hours:** 64
+- **Projects:** 5
+- **Total Hours:** 80
 - **High Priority:** 0
 - **Medium Priority:** 0  
 - **Low Priority:** 0
 
 
 ### Outreach API Expert
-- **Projects:** 4
-- **Total Hours:** 64
+- **Projects:** 5
+- **Total Hours:** 80
 - **High Priority:** 0
 - **Medium Priority:** 0  
 - **Low Priority:** 0
 
 
 ### MCP Protocol Specialist
-- **Projects:** 19
-- **Total Hours:** 124
+- **Projects:** 33
+- **Total Hours:** 192
 - **High Priority:** 0
 - **Medium Priority:** 0  
 - **Low Priority:** 0
@@ -59,11 +59,11 @@ Generated: 2025-09-01T11:41:17.441Z
 ## Recommendations
 
 
-### capacity: Full-Stack Developer has 272h workload across 38 projects
+### capacity: Full-Stack Developer has 414h workload across 66 projects
 **Action:** Consider additional specialists or extended timeline
 
 
-### capacity: MCP Protocol Specialist has 124h workload across 19 projects
+### capacity: MCP Protocol Specialist has 192h workload across 33 projects
 **Action:** Consider additional specialists or extended timeline
 
 

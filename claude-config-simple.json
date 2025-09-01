@@ -1,0 +1,22 @@
+{
+    "mcpServers": {
+        "outreach-simple": {
+            "command": "node",
+            "args": ["/Users/raphaelberrebi/mcp-outreach-server/src/simple-index.js"],
+            "cwd": "/Users/raphaelberrebi/mcp-outreach-server",
+            "env": {
+                "OUTREACH_CLIENT_ID": "huKx35FSVCR1RXClVCLsorRq.Ljk9ZyPyfo2qqW~xeug",
+                "OUTREACH_CLIENT_SECRET": "jei[VGvlj9l&]]qO*.Zlh#v!V=pGRFytVq|U{I-tXa6",
+                "OUTREACH_REFRESH_TOKEN": "shCYvyYnQ6ON_RJLmOAbGhKlqElJNI7NNhM_EKY-c-s"
+            }
+        },
+        "outreach-simple-remote": {
+            "command": "node",
+            "args": ["/Users/raphaelberrebi/mcp-outreach-server/simple-outreach-proxy.js"],
+            "env": {
+                "RAILWAY_URL": "https://mcp-outreach-server-production.up.railway.app",
+                "OUTREACH_REFRESH_TOKEN": "shCYvyYnQ6ON_RJLmOAbGhKlqElJNI7NNhM_EKY-c-s"
+            }
+        }
+    }
+}

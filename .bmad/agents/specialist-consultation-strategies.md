@@ -1,6 +1,6 @@
 # Specialist Consultation Strategies
 
-Generated: 2025-09-01T11:41:17.440Z
+Generated: 2025-09-01T12:48:25.722Z
 
 ## Overview
 
@@ -10,14 +10,14 @@ This document outlines consultation strategies for each required specialist acro
 ## Full-Stack Developer
 
 **Tier:** tier1  
-**Total Engagement:** 272 hours  
-**Stories Count:** 38  
+**Total Engagement:** 414 hours  
+**Stories Count:** 66  
 **Approach:** embedded
 
 ### Schedule Recommendation
 - **Frequency:** daily
 - **Duration:** 2-4 hours per day
-- **Total Weeks:** 14
+- **Total Weeks:** 21
 - **Milestones:** Weekly progress reviews
 
 ### Expected Deliverables
@@ -37,8 +37,8 @@ This document outlines consultation strategies for each required specialist acro
 ## API Integration Specialist
 
 **Tier:** tier1  
-**Total Engagement:** 64 hours  
-**Stories Count:** 4  
+**Total Engagement:** 80 hours  
+**Stories Count:** 5  
 **Approach:** embedded
 
 ### Schedule Recommendation
@@ -64,8 +64,8 @@ This document outlines consultation strategies for each required specialist acro
 ## Outreach API Expert
 
 **Tier:** tier2  
-**Total Engagement:** 64 hours  
-**Stories Count:** 4  
+**Total Engagement:** 80 hours  
+**Stories Count:** 5  
 **Approach:** embedded
 
 ### Schedule Recommendation
@@ -91,14 +91,14 @@ This document outlines consultation strategies for each required specialist acro
 ## MCP Protocol Specialist
 
 **Tier:** tier2  
-**Total Engagement:** 124 hours  
-**Stories Count:** 19  
+**Total Engagement:** 192 hours  
+**Stories Count:** 33  
 **Approach:** embedded
 
 ### Schedule Recommendation
 - **Frequency:** daily
 - **Duration:** 2-4 hours per day
-- **Total Weeks:** 7
+- **Total Weeks:** 10
 - **Milestones:** Weekly progress reviews
 
 ### Expected Deliverables
