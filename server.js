@@ -23,7 +23,8 @@ app.use((req, res, next) => {
     '/',
     '/auth',
     '/auth/validate',
-    '/mcp-server'
+    '/mcp-server',
+    '/download/proxy'
   ];
   
   // Allow MCP OAuth endpoints
@@ -107,7 +108,7 @@ function initializeMCPServer() {
       OUTREACH_CLIENT_SECRET: process.env.OUTREACH_CLIENT_SECRET,
       OUTREACH_REFRESH_TOKEN: process.env.OUTREACH_REFRESH_TOKEN,
       OUTREACH_REDIRECT_URI: process.env.OUTREACH_REDIRECT_URI,
-      OUTREACH_API_BASE_URL: process.env.OUTREACH_API_BASE_URL || 'https://api.outreach.io/api/v2'
+      OUTREACH_API_BASE_URL: process.env.OUTREACH_API_BASE_URL || 'https://api.outreach.io/api/v2',
     }
   });
 
@@ -196,6 +197,37 @@ app.post('/mcp', async (req, res) => {
       }
     };
     res.status(500).json(jsonRpcError);
+  }
+});
+
+// Download endpoint for proxy script
+app.get('/download/proxy', (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    // Read the proxy script file
+    const proxyPath = path.join(process.cwd(), 'outreach-proxy.cjs');
+    
+    // Check if file exists
+    if (!fs.existsSync(proxyPath)) {
+      return res.status(404).json({ error: 'Proxy script not found' });
+    }
+    
+    // Read file content
+    const proxyContent = fs.readFileSync(proxyPath, 'utf8');
+    
+    // Set appropriate headers for download
+    res.setHeader('Content-Type', 'application/javascript');
+    res.setHeader('Content-Disposition', 'attachment; filename="outreach-proxy.cjs"');
+    
+    // Send the file content
+    res.send(proxyContent);
+    
+    console.log('📥 Proxy script downloaded');
+  } catch (error) {
+    console.error('❌ Error serving proxy script:', error);
+    res.status(500).json({ error: 'Failed to serve proxy script' });
   }
 });
 
