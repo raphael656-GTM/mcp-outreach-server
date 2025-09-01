@@ -10,6 +10,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { OutreachClient } from './outreach-client.js';
 import { OutreachOAuth } from './oauth.js';
+import { MCPHealthMonitor } from './enterprise/health-monitor.js';
 import { config } from 'dotenv';
 
 config();
@@ -27,6 +28,7 @@ const server = new Server(
 );
 
 let outreachClient: OutreachClient;
+let healthMonitor: MCPHealthMonitor;
 
 async function initializeClient() {
   try {
@@ -75,6 +77,41 @@ async function initializeClient() {
     );
     
     console.error('✅ MCP Outreach server initialized with OAuth credentials');
+    
+    // Initialize health monitoring
+    console.error('🏥 Initializing health monitor...');
+    healthMonitor = new MCPHealthMonitor();
+    
+    // Register Outreach API health checker
+    healthMonitor.registerHealthChecker('outreach-api', async () => {
+      try {
+        const start = Date.now();
+        // Simple health check - list sequences with limit 1
+        await outreachClient.listSequences(1);
+        const responseTime = Date.now() - start;
+        
+        return {
+          name: 'outreach-api',
+          status: responseTime < 2000 ? 'healthy' : responseTime < 5000 ? 'warning' : 'critical',
+          responseTime,
+          details: {
+            responseTimeMs: responseTime,
+            threshold: { warning: 2000, critical: 5000 }
+          }
+        };
+      } catch (error: any) {
+        return {
+          name: 'outreach-api',
+          status: 'critical',
+          details: {
+            error: error.message,
+            errorType: error.response?.status || 'network'
+          }
+        };
+      }
+    });
+    
+    console.error('✅ Health monitoring initialized');
   } catch (error: any) {
     console.error('❌ Failed to initialize MCP client:', error);
     console.error('❌ Error details:', error?.message || 'Unknown error');
@@ -458,6 +495,56 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           },
         },
       },
+      {
+        name: 'get_health_status',
+        description: 'Get comprehensive MCP server health status and metrics',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            detailed: {
+              type: 'boolean',
+              description: 'Include detailed component health information',
+              default: true,
+            },
+          },
+        },
+      },
+      {
+        name: 'get_error_analytics',
+        description: 'Get error analytics and recovery metrics',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            hours: {
+              type: 'number',
+              description: 'Hours of error history to analyze',
+              default: 24,
+            },
+          },
+        },
+      },
+      {
+        name: 'get_rate_limit_stats',
+        description: 'Get API rate limiting statistics and utilization',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      {
+        name: 'reset_rate_limiter',
+        description: 'Reset the API rate limiter (admin function)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            confirm: {
+              type: 'boolean',
+              description: 'Confirm the rate limiter reset',
+              default: false,
+            },
+          },
+        },
+      },
     ],
   };
 });
@@ -603,6 +690,62 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'get_templates': {
         const result = await outreachClient.getTemplates(args.limit as number);
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      }
+
+      case 'get_health_status': {
+        const detailed = args.detailed !== false;
+        if (detailed) {
+          const healthReport = await healthMonitor.getHealthReport();
+          return { content: [{ type: 'text', text: JSON.stringify(healthReport, null, 2) }] };
+        } else {
+          const quickStatus = healthMonitor.getQuickStatus();
+          return { content: [{ type: 'text', text: JSON.stringify(quickStatus, null, 2) }] };
+        }
+      }
+
+      case 'get_error_analytics': {
+        const hours = args.hours as number || 24;
+        const errorMetrics = (outreachClient as any).errorHandler?.getMetrics() || {
+          message: 'Error analytics not available - enterprise features initializing'
+        };
+        const recentErrors = (outreachClient as any).errorHandler?.getRecentErrors(hours) || [];
+        
+        const analytics = {
+          timeRange: `Last ${hours} hours`,
+          metrics: errorMetrics,
+          recentErrors: recentErrors.slice(0, 10), // Limit to 10 most recent
+          summary: {
+            totalErrors: recentErrors.length,
+            criticalErrors: recentErrors.filter((e: any) => e.error.name === 'Critical').length,
+            resolvedErrors: recentErrors.filter((e: any) => e.resolved).length
+          }
+        };
+        
+        return { content: [{ type: 'text', text: JSON.stringify(analytics, null, 2) }] };
+      }
+
+      case 'get_rate_limit_stats': {
+        const rateLimitStats = (outreachClient as any).rateLimiter?.getStats() || {
+          message: 'Rate limiting stats not available - enterprise features initializing'
+        };
+        
+        return { content: [{ type: 'text', text: JSON.stringify(rateLimitStats, null, 2) }] };
+      }
+
+      case 'reset_rate_limiter': {
+        if (args.confirm === true) {
+          (outreachClient as any).rateLimiter?.reset();
+          return { content: [{ type: 'text', text: JSON.stringify({ 
+            success: true, 
+            message: 'Rate limiter has been reset',
+            timestamp: new Date().toISOString()
+          }, null, 2) }] };
+        } else {
+          return { content: [{ type: 'text', text: JSON.stringify({ 
+            success: false, 
+            message: 'Rate limiter reset requires explicit confirmation. Set "confirm": true to proceed.'
+          }, null, 2) }] };
+        }
       }
 
       default:

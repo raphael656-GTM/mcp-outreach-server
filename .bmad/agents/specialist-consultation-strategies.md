@@ -1,6 +1,6 @@
 # Specialist Consultation Strategies
 
-Generated: 2025-09-01T11:30:04.710Z
+Generated: 2025-09-01T11:41:17.440Z
 
 ## Overview
 
@@ -10,14 +10,14 @@ This document outlines consultation strategies for each required specialist acro
 ## Full-Stack Developer
 
 **Tier:** tier1  
-**Total Engagement:** 178 hours  
-**Stories Count:** 22  
+**Total Engagement:** 272 hours  
+**Stories Count:** 38  
 **Approach:** embedded
 
 ### Schedule Recommendation
 - **Frequency:** daily
 - **Duration:** 2-4 hours per day
-- **Total Weeks:** 9
+- **Total Weeks:** 14
 - **Milestones:** Weekly progress reviews
 
 ### Expected Deliverables
@@ -37,14 +37,14 @@ This document outlines consultation strategies for each required specialist acro
 ## API Integration Specialist
 
 **Tier:** tier1  
-**Total Engagement:** 48 hours  
-**Stories Count:** 3  
+**Total Engagement:** 64 hours  
+**Stories Count:** 4  
 **Approach:** embedded
 
 ### Schedule Recommendation
 - **Frequency:** daily
 - **Duration:** 2-4 hours per day
-- **Total Weeks:** 3
+- **Total Weeks:** 4
 - **Milestones:** Weekly progress reviews
 
 ### Expected Deliverables
@@ -64,14 +64,14 @@ This document outlines consultation strategies for each required specialist acro
 ## Outreach API Expert
 
 **Tier:** tier2  
-**Total Engagement:** 48 hours  
-**Stories Count:** 3  
+**Total Engagement:** 64 hours  
+**Stories Count:** 4  
 **Approach:** embedded
 
 ### Schedule Recommendation
 - **Frequency:** daily
 - **Duration:** 2-4 hours per day
-- **Total Weeks:** 3
+- **Total Weeks:** 4
 - **Milestones:** Weekly progress reviews
 
 ### Expected Deliverables
@@ -91,14 +91,14 @@ This document outlines consultation strategies for each required specialist acro
 ## MCP Protocol Specialist
 
 **Tier:** tier2  
-**Total Engagement:** 80 hours  
-**Stories Count:** 11  
+**Total Engagement:** 124 hours  
+**Stories Count:** 19  
 **Approach:** embedded
 
 ### Schedule Recommendation
 - **Frequency:** daily
 - **Duration:** 2-4 hours per day
-- **Total Weeks:** 4
+- **Total Weeks:** 7
 - **Milestones:** Weekly progress reviews
 
 ### Expected Deliverables

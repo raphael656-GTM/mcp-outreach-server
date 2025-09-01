@@ -1,7 +1,11 @@
 import axios, { AxiosInstance } from 'axios';
+import { OutreachRateLimiter } from './enterprise/rate-limiter.js';
+import { EnhancedErrorHandler, ErrorContext } from './enterprise/error-handler.js';
 
 export class OutreachClient {
   private client: AxiosInstance;
+  private rateLimiter: OutreachRateLimiter;
+  private errorHandler: EnhancedErrorHandler;
 
   constructor(apiToken: string, baseURL: string) {
     if (!apiToken) {
@@ -15,7 +19,49 @@ export class OutreachClient {
         'Content-Type': 'application/vnd.api+json',
         'Accept': 'application/vnd.api+json',
       },
+      timeout: 30000, // 30 second timeout
     });
+
+    // Initialize enterprise features
+    this.rateLimiter = new OutreachRateLimiter();
+    this.errorHandler = new EnhancedErrorHandler();
+  }
+
+  // Enterprise API wrapper with rate limiting and error handling
+  private async executeApiCall<T>(
+    operation: () => Promise<T>,
+    operationName: string,
+    toolName?: string
+  ): Promise<T> {
+    const context: ErrorContext = {
+      operation: operationName,
+      toolName,
+      timestamp: Date.now(),
+      attempt: 1
+    };
+
+    return await this.rateLimiter.executeWithRateLimit(
+      async () => {
+        try {
+          return await operation();
+        } catch (error: any) {
+          // Create recovery strategies based on error type
+          const recoveryStrategies = [];
+          
+          // For authentication errors, we could add token refresh logic
+          if (error.response?.status === 401) {
+            recoveryStrategies.push(async () => {
+              console.error('🔄 Token refresh strategy would go here');
+              throw error; // For now, just re-throw
+            });
+          }
+          
+          // Handle the error with recovery strategies
+          throw await this.errorHandler.handleError(error, context, recoveryStrategies);
+        }
+      },
+      operationName
+    );
   }
 
   async createSequence(
@@ -24,39 +70,44 @@ export class OutreachClient {
     enabled: boolean = true,
     shareType: string = 'private'
   ) {
-    const payload = {
-      data: {
-        type: 'sequence',
-        attributes: {
-          name,
-          description: description || '',
-          enabled,
-          shareType,
-          sequenceType: 'outbound',
-        },
+    return await this.executeApiCall(
+      async () => {
+        const payload = {
+          data: {
+            type: 'sequence',
+            attributes: {
+              name,
+              description: description || '',
+              enabled,
+              shareType,
+              sequenceType: 'outbound',
+            },
+          },
+        };
+        
+        const response = await this.client.post('/sequences', payload);
+        return response.data;
       },
-    };
-
-    try {
-      const response = await this.client.post('/sequences', payload);
-      return response.data;
-    } catch (error: any) {
-      if (error.response) {
-        throw new Error(`Failed to create sequence: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
-      }
-      throw error;
-    }
+      'create_sequence',
+      'create_sequence'
+    );
   }
 
   async listSequences(limit: number = 50, offset: number = 0) {
-    const response = await this.client.get('/sequences', {
-      params: {
-        'page[limit]': limit,
-        'page[offset]': offset,
-        'sort': '-createdAt',
+    return await this.executeApiCall(
+      async () => {
+        const response = await this.client.get('/sequences', {
+          params: {
+            'page[limit]': limit,
+            'page[offset]': offset,
+            'sort': '-createdAt',
+          },
+        });
+        return response.data;
       },
-    });
-    return response.data;
+      'list_sequences',
+      'list_sequences'
+    );
   }
 
   async getAccountProspects(
