@@ -39,14 +39,14 @@
 ---
 
 ## 🚀 Method 1: Phase 3 Enterprise Remote (Current - 29 Tools)
-**Best for**: Users who want immediate access without any setup or API keys
+**Best for**: Sales teams who want immediate access with centralized admin control
 
 ### What You Get
-- ✅ **No OAuth setup required** - Authentication handled remotely
+- ✅ **No OAuth setup required** - Admin manages authentication on Railway
 - ✅ **29 enterprise tools** ready to use (12 core + 9 advanced + 8 enterprise)
-- ✅ **Zero maintenance** - Updates handled automatically
+- ✅ **Zero maintenance** - Updates handled automatically by admin
 - ✅ **Enterprise monitoring** - Health checks, error analytics, rate limiting
-- ✅ **No API keys needed** - Everything managed server-side
+- ✅ **Shared access** - All users leverage admin's Outreach permissions
 
 ### Setup Steps
 
@@ -74,9 +74,12 @@
    ```json
    {
      "mcpServers": {
-       "outreach-remote": {
+       "outreach-phase3-enterprise": {
          "command": "node",
-         "args": ["/absolute/path/to/outreach-proxy.cjs"]
+         "args": ["/absolute/path/to/outreach-proxy-phase3.cjs"],
+         "env": {
+           "RAILWAY_URL": "https://mcp-outreach-server-production.up.railway.app"
+         }
        }
      }
    }
@@ -198,33 +201,43 @@ Edit your Claude config file and add:
 
 ### **Deployment Architecture:**
 ```
-7 Sales Reps → Individual Claude Desktop → Phase 3 Proxy Scripts → Railway Server → Outreach API
+7 Sales Reps → Individual Claude Desktop → Phase 3 Proxy Scripts → Railway Server (Admin OAuth) → Outreach API
 ```
 
 ### **Scaling Approach:**
-1. **Centralized Server**: Single Railway deployment handles all users
-2. **Individual Proxy Scripts**: Each user has their own proxy configuration  
-3. **Personal Authentication**: Each user connects with their own Outreach OAuth
-4. **Shared Monitoring**: Enterprise health monitoring across all users
+1. **Centralized Authentication**: Admin manages OAuth tokens on Railway server
+2. **Individual Proxy Scripts**: Each user gets their own proxy configuration  
+3. **Shared API Access**: All users leverage the centralized Outreach connection
+4. **Enterprise Monitoring**: Health monitoring and analytics across all users
 
-### **User Onboarding Process:**
+### **User Onboarding Process (Zero OAuth Setup):**
 ```bash
-# Step 1: User downloads their proxy script
+# Step 1: User downloads their proxy script (no API keys needed)
 curl -O https://raw.githubusercontent.com/raphael656-GTM/mcp-outreach-server/main/outreach-proxy-phase3.cjs
+chmod +x outreach-proxy-phase3.cjs
 
 # Step 2: Configure Claude Desktop with unique server name
 {
   "mcpServers": {
     "outreach-[USERNAME]": {
       "command": "node",
-      "args": ["/path/to/outreach-proxy-phase3.cjs"]
+      "args": ["/full/path/to/outreach-proxy-phase3.cjs"],
+      "env": {
+        "RAILWAY_URL": "https://mcp-outreach-server-production.up.railway.app"
+      }
     }
   }
 }
 
-# Step 3: Test with health check
+# Step 3: Test with health check (uses admin's OAuth automatically)
 "Check my Outreach server health status"
 ```
+
+### **Benefits of Centralized OAuth:**
+- ✅ **Zero Setup for Users**: No API keys or OAuth flows required
+- ✅ **Admin Control**: You manage all authentication centrally  
+- ✅ **Consistent Access**: All users get same permissions and data access
+- ✅ **Easy Maintenance**: Token refresh handled centrally on Railway
 
 ### **Monitoring Dashboard (Coming Next):**
 - 📊 **User Activity**: Track tool usage per user
