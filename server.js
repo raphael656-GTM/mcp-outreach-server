@@ -89,16 +89,28 @@ app.post('/auth/validate', (req, res) => {
 // Store MCP server instance
 let mcpProcess = null;
 let isInitialized = false;
+let initLogs = [];
+
+function addInitLog(message) {
+  const timestamp = new Date().toISOString();
+  const logEntry = `${timestamp}: ${message}`;
+  initLogs.push(logEntry);
+  console.log(logEntry);
+  // Keep only last 50 log entries
+  if (initLogs.length > 50) {
+    initLogs = initLogs.slice(-50);
+  }
+}
 
 // Initialize MCP server
 function initializeMCPServer() {
   if (mcpProcess) return mcpProcess;
   
-  console.log('🚀 Starting MCP Outreach server...');
-  console.log('📋 Environment check:');
-  console.log('  - OUTREACH_CLIENT_ID:', process.env.OUTREACH_CLIENT_ID ? '✅ Set' : '❌ Missing');
-  console.log('  - OUTREACH_CLIENT_SECRET:', process.env.OUTREACH_CLIENT_SECRET ? '✅ Set' : '❌ Missing');
-  console.log('  - OUTREACH_REFRESH_TOKEN:', process.env.OUTREACH_REFRESH_TOKEN ? '✅ Set' : '❌ Missing');
+  addInitLog('🚀 Starting MCP Outreach server...');
+  addInitLog('📋 Environment check:');
+  addInitLog(`  - OUTREACH_CLIENT_ID: ${process.env.OUTREACH_CLIENT_ID ? '✅ Set' : '❌ Missing'}`);
+  addInitLog(`  - OUTREACH_CLIENT_SECRET: ${process.env.OUTREACH_CLIENT_SECRET ? '✅ Set' : '❌ Missing'}`);
+  addInitLog(`  - OUTREACH_REFRESH_TOKEN: ${process.env.OUTREACH_REFRESH_TOKEN ? '✅ Set' : '❌ Missing'}`);
   
   mcpProcess = spawn('node', ['dist/index.js'], {
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -113,24 +125,26 @@ function initializeMCPServer() {
   });
 
   mcpProcess.stdout.on('data', (data) => {
-    console.log('📡 MCP Server:', data.toString().trim());
+    const output = data.toString().trim();
+    addInitLog(`📡 MCP Server stdout: ${output}`);
   });
 
   mcpProcess.stderr.on('data', (data) => {
     const output = data.toString().trim();
-    console.log('🔧 MCP Server:', output);
+    addInitLog(`🔧 MCP Server stderr: ${output}`);
     
-    if (output.includes('Outreach MCP server running') || output.includes('Enhanced Outreach Client initialized')) {
+    if (output.includes('MCP Outreach server running') || output.includes('✅ MCP Outreach server initialized')) {
       isInitialized = true;
+      addInitLog('✅ MCP Server marked as initialized!');
     }
   });
 
   mcpProcess.on('error', (error) => {
-    console.error('❌ MCP Server error:', error);
+    addInitLog(`❌ MCP Server error: ${error.message}`);
   });
 
   mcpProcess.on('exit', (code) => {
-    console.log(`🔄 MCP Server exited with code ${code}`);
+    addInitLog(`🔄 MCP Server exited with code ${code}`);
     mcpProcess = null;
     isInitialized = false;
   });
@@ -461,6 +475,15 @@ app.get('/health', (req, res) => {
       OUTREACH_REFRESH_TOKEN: process.env.OUTREACH_REFRESH_TOKEN ? 'Set' : 'Missing',
       OUTREACH_REDIRECT_URI: process.env.OUTREACH_REDIRECT_URI ? 'Set' : 'Missing'
     }
+  });
+});
+
+// MCP initialization logs endpoint
+app.get('/logs', (req, res) => {
+  res.json({
+    timestamp: new Date().toISOString(),
+    mcp_initialized: isInitialized,
+    logs: initLogs
   });
 });
 
