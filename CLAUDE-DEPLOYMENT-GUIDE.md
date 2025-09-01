@@ -6,7 +6,8 @@
 ## 🏢 Current Status
 - ✅ **Phase 3 Enterprise** deployment ready with 29 tools
 - 🎯 **Next Goal**: Scale deployment across 7+ different users
-- 🔧 **Current Issue**: Debugging Claude Desktop validation errors
+- 🔧 **Admin Issue**: Zod validation errors when admin tests direct server connection (FIXED)
+- 👥 **User Setup**: Proxy scripts ready for 7-user deployment
 
 ## 🚀 Phase 3 Enterprise Features (Ready for Multi-User Deployment)
 
@@ -30,11 +31,12 @@
 
 ---
 
-## 🐛 Current Debugging: Claude Desktop Validation Errors
+## 🔧 Recent Fix: Admin Zod Validation Errors 
 
-**Issue**: Claude Desktop showing validation errors with proxy scripts
-**Debug Approach**: Created debug proxy to identify JSON-RPC 2.0 compliance issues
-**Status**: In progress - debug logs needed from users
+**Issue**: Admin experiencing Zod validation errors when testing direct MCP server
+**Root Cause**: Server startup failing during OAuth initialization, causing malformed responses
+**Solution**: Server now starts gracefully even if OAuth fails, provides proper error messages
+**Status**: ✅ FIXED - Server now handles OAuth failures gracefully
 
 ---
 
@@ -201,14 +203,16 @@ Edit your Claude config file and add:
 
 ### **Deployment Architecture:**
 ```
-7 Sales Reps → Individual Claude Desktop → Phase 3 Proxy Scripts → Railway Server (Admin OAuth) → Outreach API
+Admin (You) → Claude Desktop → Direct MCP Server → Outreach API (Your OAuth)
+     ↕
+7 Sales Reps → Claude Desktop → Proxy Scripts → Railway Server → Outreach API (Your OAuth)
 ```
 
-### **Scaling Approach:**
-1. **Centralized Authentication**: Admin manages OAuth tokens on Railway server
-2. **Individual Proxy Scripts**: Each user gets their own proxy configuration  
-3. **Shared API Access**: All users leverage the centralized Outreach connection
-4. **Enterprise Monitoring**: Health monitoring and analytics across all users
+### **Two-Tier Setup:**
+1. **Admin Setup (You)**: Direct connection to local/Railway MCP server without proxy
+2. **User Setup (7 Reps)**: Proxy scripts connecting to your Railway deployment  
+3. **Centralized Authentication**: Your OAuth tokens power both admin and user access
+4. **Enterprise Monitoring**: You monitor all activity through direct server access
 
 ### **User Onboarding Process (Zero OAuth Setup):**
 ```bash
@@ -246,6 +250,64 @@ chmod +x outreach-proxy-phase3.cjs
 - 🔄 **Health Status**: Real-time status of all user connections
 
 ### **Current Blocker**: Claude Desktop validation errors need debugging before scaling
+
+---
+
+## 👑 Admin Setup (Direct MCP Server Access)
+
+**For**: Platform admin (you) who manages OAuth and monitors all users
+
+### **Admin Architecture:**
+```
+You → Claude Desktop → dist/index.js (Direct) → Outreach API (Your OAuth)
+```
+
+### **Admin Setup Steps:**
+
+1. **Local Development Setup**
+   ```bash
+   # Your current setup
+   git clone https://github.com/raphael656-GTM/mcp-outreach-server.git
+   cd mcp-outreach-server
+   npm install
+   npm run build
+   ```
+
+2. **Claude Desktop Config (Admin)**
+   ```json
+   {
+     "mcpServers": {
+       "outreach-admin-direct": {
+         "command": "node",
+         "args": ["/Users/raphaelberrebi/mcp-outreach-server/dist/index.js"],
+         "env": {
+           "OUTREACH_CLIENT_ID": "your_oauth_client_id",
+           "OUTREACH_CLIENT_SECRET": "your_oauth_client_secret", 
+           "OUTREACH_REFRESH_TOKEN": "your_refresh_token",
+           "OUTREACH_REDIRECT_URI": "https://mcp-outreach-server-production.up.railway.app/callback"
+         }
+       }
+     }
+   }
+   ```
+
+3. **Admin Benefits:**
+   - ✅ **Direct server access** - No proxy layer delays
+   - ✅ **Full enterprise monitoring** - All 29 tools including analytics
+   - ✅ **Real-time debugging** - See server logs directly
+   - ✅ **OAuth management** - Control authentication for all users
+
+4. **Current Issue (Admin Only):**
+   - 🔧 **Zod validation errors** when testing tools
+   - **Cause**: Server startup/OAuth initialization issues 
+   - **Status**: Fixed in latest commit - server now starts gracefully
+
+### **Testing Admin Setup:**
+```
+"List all available Outreach tools"
+"Check my Outreach server health status" 
+"Show me error analytics for the last 24 hours"
+```
 
 ---
 
