@@ -27,8 +27,18 @@ const server = new Server(
   }
 );
 
-let outreachClient: OutreachClient;
+let outreachClient: OutreachClient | null = null;
 let healthMonitor: MCPHealthMonitor;
+
+function ensureOutreachClient(): OutreachClient {
+  if (!outreachClient) {
+    throw new McpError(
+      ErrorCode.InternalError,
+      'Outreach client not initialized. Please check server logs for authentication errors.'
+    );
+  }
+  return outreachClient;
+}
 
 async function initializeClient() {
   try {
@@ -87,7 +97,9 @@ async function initializeClient() {
       try {
         const start = Date.now();
         // Simple health check - list sequences with limit 1
-        await outreachClient.listSequences(1);
+        if (outreachClient) {
+          await outreachClient.listSequences(1);
+        }
         const responseTime = Date.now() - start;
         
         return {
@@ -555,7 +567,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     switch (name) {
       case 'create_sequence': {
-        const result = await outreachClient.createSequence(
+        const client = ensureOutreachClient();
+        const result = await client.createSequence(
           args.name as string,
           args.description as string,
           args.enabled as boolean,
@@ -565,7 +578,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'list_sequences': {
-        const result = await outreachClient.listSequences(
+        const client = ensureOutreachClient();
+        const result = await client.listSequences(
           args.limit as number,
           args.offset as number
         );
@@ -573,7 +587,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'get_account_prospects': {
-        const result = await outreachClient.getAccountProspects(
+        const client = ensureOutreachClient();
+        const result = await client.getAccountProspects(
           args.accountId as number,
           args.accountName as string,
           args.limit as number
@@ -582,7 +597,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'search_accounts': {
-        const result = await outreachClient.searchAccounts(
+        const client = ensureOutreachClient();
+        const result = await client.searchAccounts(
           args.query as string,
           args.limit as number
         );
@@ -590,7 +606,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'add_prospects_to_sequence': {
-        const result = await outreachClient.addProspectsToSequence(
+        const client = ensureOutreachClient();
+        const result = await client.addProspectsToSequence(
           args.sequenceId as number,
           args.prospectIds as number[],
           args.mailboxId as number
@@ -599,7 +616,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'create_sequence_step': {
-        const result = await outreachClient.createSequenceStep(
+        const client = ensureOutreachClient();
+        const result = await client.createSequenceStep(
           args.sequenceId as number,
           args.order as number,
           args.interval as number,
@@ -611,12 +629,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'get_sequence_by_id': {
-        const result = await outreachClient.getSequenceById(args.sequenceId as number);
+        const client = ensureOutreachClient();
+        const result = await client.getSequenceById(args.sequenceId as number);
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       }
 
       case 'update_sequence': {
-        const result = await outreachClient.updateSequence(
+        const client = ensureOutreachClient();
+        const result = await client.updateSequence(
           args.sequenceId as number,
           args.name as string,
           args.description as string,
@@ -626,17 +646,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'delete_sequence': {
-        const result = await outreachClient.deleteSequence(args.sequenceId as number);
+        const client = ensureOutreachClient();
+        const result = await client.deleteSequence(args.sequenceId as number);
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       }
 
       case 'get_sequence_steps': {
-        const result = await outreachClient.getSequenceSteps(args.sequenceId as number);
+        const client = ensureOutreachClient();
+        const result = await client.getSequenceSteps(args.sequenceId as number);
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       }
 
       case 'update_sequence_step': {
-        const result = await outreachClient.updateSequenceStep(
+        const client = ensureOutreachClient();
+        const result = await client.updateSequenceStep(
           args.stepId as number,
           args.subject as string,
           args.body as string,
@@ -646,12 +669,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'delete_sequence_step': {
-        const result = await outreachClient.deleteSequenceStep(args.stepId as number);
+        const client = ensureOutreachClient();
+        const result = await client.deleteSequenceStep(args.stepId as number);
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       }
 
       case 'create_prospect': {
-        const result = await outreachClient.createProspect(
+        const client = ensureOutreachClient();
+        const result = await client.createProspect(
           args.firstName as string,
           args.lastName as string,
           args.email as string,
@@ -662,7 +687,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'update_prospect': {
-        const result = await outreachClient.updateProspect(
+        const client = ensureOutreachClient();
+        const result = await client.updateProspect(
           args.prospectId as number,
           args.firstName as string,
           args.lastName as string,
@@ -674,12 +700,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'get_prospect_by_id': {
-        const result = await outreachClient.getProspectById(args.prospectId as number);
+        const client = ensureOutreachClient();
+        const result = await client.getProspectById(args.prospectId as number);
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       }
 
       case 'search_prospects': {
-        const result = await outreachClient.searchProspects(
+        const client = ensureOutreachClient();
+        const result = await client.searchProspects(
           args.email as string,
           args.company as string,
           args.limit as number
@@ -688,7 +716,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'get_templates': {
-        const result = await outreachClient.getTemplates(args.limit as number);
+        const client = ensureOutreachClient();
+        const result = await client.getTemplates(args.limit as number);
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       }
 
@@ -790,13 +819,24 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 
 async function main() {
-  await initializeClient();
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error('MCP Outreach server running on stdio');
+  try {
+    // Initialize MCP server first, then try to connect to Outreach
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    console.error('MCP Outreach server started on stdio');
+    
+    // Try to initialize Outreach client in background
+    try {
+      await initializeClient();
+      console.error('✅ Outreach client initialized successfully');
+    } catch (error) {
+      console.error('⚠️  Outreach client initialization failed, server will still respond with error messages');
+      console.error('Error:', (error as any).message);
+      // Server continues to run but tools will return authentication errors
+    }
+    
+  } catch (error) {
+    console.error('Fatal MCP server error:', error);
+    process.exit(1);
+  }
 }
-
-main().catch((error) => {
-  console.error('Fatal error:', error);
-  process.exit(1);
-});
