@@ -5,9 +5,10 @@
 
 ## 🏢 Current Status
 - ✅ **Phase 3 Enterprise** deployment ready with 29 tools
-- 🎯 **Next Goal**: Scale deployment across 7+ different users
-- 🔧 **Admin Issue**: Zod validation errors when admin tests direct server connection (FIXED)
-- 👥 **User Setup**: Proxy scripts ready for 7-user deployment
+- 🔧 **Local Server Issue**: OAuth 401 errors - invalid_client authentication failure
+- 🔧 **Remote Proxy Issue**: Zod validation errors in proxy script responses  
+- 🎯 **Current Task**: Fix both authentication and proxy validation issues
+- 👥 **User Deployment**: Blocked until proxy validation errors resolved
 
 ## 🚀 Phase 3 Enterprise Features (Ready for Multi-User Deployment)
 
@@ -31,12 +32,30 @@
 
 ---
 
-## 🔧 Recent Fix: Admin Zod Validation Errors 
+## 🚨 Current Issues Blocking Deployment
 
-**Issue**: Admin experiencing Zod validation errors when testing direct MCP server
-**Root Cause**: Server startup failing during OAuth initialization, causing malformed responses
-**Solution**: Server now starts gracefully even if OAuth fails, provides proper error messages
-**Status**: ✅ FIXED - Server now handles OAuth failures gracefully
+### **Issue 1: Local MCP Server (Admin) - OAuth Authentication Failure**
+```
+❌ OAuth token refresh failed: HTTP 401: "invalid_client" 
+❌ Client authentication failed due to unknown client
+```
+**Root Cause**: Outreach OAuth application credentials invalid/expired  
+**Impact**: Admin cannot use direct server connection  
+**Status**: ❌ NEEDS FIX - OAuth app may need regeneration
+
+### **Issue 2: Remote Proxy Server (Users) - Zod Validation Errors**
+```
+❌ Zod validation error: "invalid_union", "method" Required, "error" unrecognized keys
+```
+**Root Cause**: Proxy script sending malformed MCP protocol responses  
+**Impact**: Users cannot use proxy scripts  
+**Status**: ❌ NEEDS FIX - Proxy response format incorrect
+
+### **Immediate Action Plan:**
+1. **Fix OAuth**: Regenerate Outreach OAuth application credentials
+2. **Fix Proxy**: Debug and fix JSON-RPC 2.0 response formatting in proxy scripts
+3. **Test Both**: Verify admin direct server and user proxy scripts work
+4. **Deploy**: Roll out to 7 users once both issues resolved
 
 ---
 
