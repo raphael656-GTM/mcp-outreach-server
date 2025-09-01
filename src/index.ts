@@ -236,6 +236,228 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ['sequenceId', 'order', 'stepType'],
         },
       },
+      {
+        name: 'get_sequence_by_id',
+        description: 'Get detailed sequence information by ID',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            sequenceId: {
+              type: 'number',
+              description: 'ID of the sequence to retrieve',
+            },
+          },
+          required: ['sequenceId'],
+        },
+      },
+      {
+        name: 'update_sequence',
+        description: 'Update an existing sequence',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            sequenceId: {
+              type: 'number',
+              description: 'ID of the sequence to update',
+            },
+            name: {
+              type: 'string',
+              description: 'New name for the sequence',
+            },
+            description: {
+              type: 'string',
+              description: 'New description for the sequence',
+            },
+            enabled: {
+              type: 'boolean',
+              description: 'Whether the sequence should be enabled',
+            },
+          },
+          required: ['sequenceId'],
+        },
+      },
+      {
+        name: 'delete_sequence',
+        description: 'Delete a sequence',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            sequenceId: {
+              type: 'number',
+              description: 'ID of the sequence to delete',
+            },
+          },
+          required: ['sequenceId'],
+        },
+      },
+      {
+        name: 'get_sequence_steps',
+        description: 'Get all steps for a sequence',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            sequenceId: {
+              type: 'number',
+              description: 'ID of the sequence',
+            },
+          },
+          required: ['sequenceId'],
+        },
+      },
+      {
+        name: 'update_sequence_step',
+        description: 'Update a sequence step',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            stepId: {
+              type: 'number',
+              description: 'ID of the step to update',
+            },
+            subject: {
+              type: 'string',
+              description: 'Email subject (for email steps)',
+            },
+            body: {
+              type: 'string',
+              description: 'Content of the step',
+            },
+            interval: {
+              type: 'number',
+              description: 'Days to wait before this step',
+            },
+          },
+          required: ['stepId'],
+        },
+      },
+      {
+        name: 'delete_sequence_step',
+        description: 'Delete a sequence step',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            stepId: {
+              type: 'number',
+              description: 'ID of the step to delete',
+            },
+          },
+          required: ['stepId'],
+        },
+      },
+      {
+        name: 'create_prospect',
+        description: 'Create a new prospect',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            firstName: {
+              type: 'string',
+              description: 'First name of the prospect',
+            },
+            lastName: {
+              type: 'string',
+              description: 'Last name of the prospect',
+            },
+            email: {
+              type: 'string',
+              description: 'Email address of the prospect',
+            },
+            company: {
+              type: 'string',
+              description: 'Company name',
+            },
+            title: {
+              type: 'string',
+              description: 'Job title',
+            },
+          },
+          required: ['firstName', 'lastName', 'email'],
+        },
+      },
+      {
+        name: 'update_prospect',
+        description: 'Update prospect details',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            prospectId: {
+              type: 'number',
+              description: 'ID of the prospect to update',
+            },
+            firstName: {
+              type: 'string',
+              description: 'First name of the prospect',
+            },
+            lastName: {
+              type: 'string',
+              description: 'Last name of the prospect',
+            },
+            email: {
+              type: 'string',
+              description: 'Email address of the prospect',
+            },
+            company: {
+              type: 'string',
+              description: 'Company name',
+            },
+            title: {
+              type: 'string',
+              description: 'Job title',
+            },
+          },
+          required: ['prospectId'],
+        },
+      },
+      {
+        name: 'get_prospect_by_id',
+        description: 'Get detailed prospect information by ID',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            prospectId: {
+              type: 'number',
+              description: 'ID of the prospect to retrieve',
+            },
+          },
+          required: ['prospectId'],
+        },
+      },
+      {
+        name: 'search_prospects',
+        description: 'Search for prospects',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            email: {
+              type: 'string',
+              description: 'Email to search for',
+            },
+            company: {
+              type: 'string',
+              description: 'Company name to search for',
+            },
+            limit: {
+              type: 'number',
+              description: 'Number of prospects to return',
+              default: 25,
+            },
+          },
+        },
+      },
+      {
+        name: 'get_templates',
+        description: 'List email templates',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            limit: {
+              type: 'number',
+              description: 'Number of templates to return',
+              default: 50,
+            },
+          },
+        },
+      },
     ],
   };
 });
@@ -298,6 +520,88 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           args.subject as string,
           args.body as string
         );
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      }
+
+      case 'get_sequence_by_id': {
+        const result = await outreachClient.getSequenceById(args.sequenceId as number);
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      }
+
+      case 'update_sequence': {
+        const result = await outreachClient.updateSequence(
+          args.sequenceId as number,
+          args.name as string,
+          args.description as string,
+          args.enabled as boolean
+        );
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      }
+
+      case 'delete_sequence': {
+        const result = await outreachClient.deleteSequence(args.sequenceId as number);
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      }
+
+      case 'get_sequence_steps': {
+        const result = await outreachClient.getSequenceSteps(args.sequenceId as number);
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      }
+
+      case 'update_sequence_step': {
+        const result = await outreachClient.updateSequenceStep(
+          args.stepId as number,
+          args.subject as string,
+          args.body as string,
+          args.interval as number
+        );
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      }
+
+      case 'delete_sequence_step': {
+        const result = await outreachClient.deleteSequenceStep(args.stepId as number);
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      }
+
+      case 'create_prospect': {
+        const result = await outreachClient.createProspect(
+          args.firstName as string,
+          args.lastName as string,
+          args.email as string,
+          args.company as string,
+          args.title as string
+        );
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      }
+
+      case 'update_prospect': {
+        const result = await outreachClient.updateProspect(
+          args.prospectId as number,
+          args.firstName as string,
+          args.lastName as string,
+          args.email as string,
+          args.company as string,
+          args.title as string
+        );
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      }
+
+      case 'get_prospect_by_id': {
+        const result = await outreachClient.getProspectById(args.prospectId as number);
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      }
+
+      case 'search_prospects': {
+        const result = await outreachClient.searchProspects(
+          args.email as string,
+          args.company as string,
+          args.limit as number
+        );
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      }
+
+      case 'get_templates': {
+        const result = await outreachClient.getTemplates(args.limit as number);
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       }
 

@@ -1,6 +1,6 @@
 # Specialist Consultation Strategies
 
-Generated: 2025-09-01T09:44:00.702Z
+Generated: 2025-09-01T11:30:04.710Z
 
 ## Overview
 
@@ -10,14 +10,14 @@ This document outlines consultation strategies for each required specialist acro
 ## Full-Stack Developer
 
 **Tier:** tier1  
-**Total Engagement:** 108 hours  
-**Stories Count:** 12  
+**Total Engagement:** 178 hours  
+**Stories Count:** 22  
 **Approach:** embedded
 
 ### Schedule Recommendation
 - **Frequency:** daily
 - **Duration:** 2-4 hours per day
-- **Total Weeks:** 6
+- **Total Weeks:** 9
 - **Milestones:** Weekly progress reviews
 
 ### Expected Deliverables
@@ -34,11 +34,11 @@ This document outlines consultation strategies for each required specialist acro
 
 ---
 
-## MCP Protocol Specialist
+## API Integration Specialist
 
-**Tier:** tier2  
+**Tier:** tier1  
 **Total Engagement:** 48 hours  
-**Stories Count:** 6  
+**Stories Count:** 3  
 **Approach:** embedded
 
 ### Schedule Recommendation
@@ -61,18 +61,18 @@ This document outlines consultation strategies for each required specialist acro
 
 ---
 
-## API Integration Specialist
+## Outreach API Expert
 
-**Tier:** tier1  
-**Total Engagement:** 32 hours  
-**Stories Count:** 2  
-**Approach:** advisory
+**Tier:** tier2  
+**Total Engagement:** 48 hours  
+**Stories Count:** 3  
+**Approach:** embedded
 
 ### Schedule Recommendation
-- **Frequency:** weekly
-- **Duration:** 1-2 hour sessions
-- **Total Weeks:** 7
-- **Milestones:** Monthly strategic reviews
+- **Frequency:** daily
+- **Duration:** 2-4 hours per day
+- **Total Weeks:** 3
+- **Milestones:** Weekly progress reviews
 
 ### Expected Deliverables
 - Requirements analysis
@@ -88,18 +88,18 @@ This document outlines consultation strategies for each required specialist acro
 
 ---
 
-## Outreach API Expert
+## MCP Protocol Specialist
 
 **Tier:** tier2  
-**Total Engagement:** 32 hours  
-**Stories Count:** 2  
-**Approach:** advisory
+**Total Engagement:** 80 hours  
+**Stories Count:** 11  
+**Approach:** embedded
 
 ### Schedule Recommendation
-- **Frequency:** weekly
-- **Duration:** 1-2 hour sessions
-- **Total Weeks:** 7
-- **Milestones:** Monthly strategic reviews
+- **Frequency:** daily
+- **Duration:** 2-4 hours per day
+- **Total Weeks:** 4
+- **Milestones:** Weekly progress reviews
 
 ### Expected Deliverables
 - Requirements analysis
