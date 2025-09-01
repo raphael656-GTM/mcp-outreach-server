@@ -29,38 +29,58 @@ const server = new Server(
 let outreachClient: OutreachClient;
 
 async function initializeClient() {
-  // Use OAuth credentials for MCP servers
-  const clientId = process.env.OUTREACH_CLIENT_ID;
-  const clientSecret = process.env.OUTREACH_CLIENT_SECRET;
-  const refreshToken = process.env.OUTREACH_REFRESH_TOKEN;
-  const redirectUri = process.env.OUTREACH_REDIRECT_URI || 'http://localhost:3000/callback';
-  
-  if (!clientId || !clientSecret || !refreshToken) {
-    throw new Error('OUTREACH_CLIENT_ID, OUTREACH_CLIENT_SECRET, and OUTREACH_REFRESH_TOKEN environment variables are required.');
-  }
+  try {
+    console.error('🔄 Starting MCP client initialization...');
+    
+    // Use OAuth credentials for MCP servers
+    const clientId = process.env.OUTREACH_CLIENT_ID;
+    const clientSecret = process.env.OUTREACH_CLIENT_SECRET;
+    const refreshToken = process.env.OUTREACH_REFRESH_TOKEN;
+    const redirectUri = process.env.OUTREACH_REDIRECT_URI || 'http://localhost:3000/callback';
+    
+    console.error('📋 Environment variables check:');
+    console.error(`  - CLIENT_ID: ${clientId ? '✅' : '❌'}`);
+    console.error(`  - CLIENT_SECRET: ${clientSecret ? '✅' : '❌'}`);
+    console.error(`  - REFRESH_TOKEN: ${refreshToken ? '✅' : '❌'}`);
+    console.error(`  - REDIRECT_URI: ${redirectUri}`);
+    
+    if (!clientId || !clientSecret || !refreshToken) {
+      throw new Error('OUTREACH_CLIENT_ID, OUTREACH_CLIENT_SECRET, and OUTREACH_REFRESH_TOKEN environment variables are required.');
+    }
 
-  // Initialize OAuth with config object and manually set refresh token
-  const oauth = new OutreachOAuth({
-    clientId,
-    clientSecret,
-    redirectUri,
-    scope: 'read write'
-  });
-  
-  // Manually set the token data for refresh
-  (oauth as any).tokenData = {
-    refresh_token: refreshToken,
-    expires_at: 0 // Force refresh
-  };
-  
-  const accessToken = await (oauth as any).refreshToken();
-  
-  outreachClient = new OutreachClient(
-    accessToken,
-    process.env.OUTREACH_API_URL || 'https://api.outreach.io/api/v2'
-  );
-  
-  console.error('MCP Outreach server initialized with OAuth credentials');
+    console.error('🔐 Initializing OAuth client...');
+    // Initialize OAuth with config object and manually set refresh token
+    const oauth = new OutreachOAuth({
+      clientId,
+      clientSecret,
+      redirectUri,
+      scope: 'read write'
+    });
+    
+    console.error('🔄 Setting refresh token data...');
+    // Manually set the token data for refresh
+    (oauth as any).tokenData = {
+      refresh_token: refreshToken,
+      expires_at: 0 // Force refresh
+    };
+    
+    console.error('🔄 Attempting to refresh access token...');
+    const accessToken = await (oauth as any).refreshToken();
+    console.error('✅ Access token obtained successfully');
+    
+    console.error('🌐 Initializing Outreach client...');
+    outreachClient = new OutreachClient(
+      accessToken,
+      process.env.OUTREACH_API_URL || 'https://api.outreach.io/api/v2'
+    );
+    
+    console.error('✅ MCP Outreach server initialized with OAuth credentials');
+  } catch (error: any) {
+    console.error('❌ Failed to initialize MCP client:', error);
+    console.error('❌ Error details:', error?.message || 'Unknown error');
+    console.error('❌ Error stack:', error?.stack || 'No stack trace');
+    throw error;
+  }
 }
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
