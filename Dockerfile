@@ -6,20 +6,12 @@ WORKDIR /app
 # Add package files
 COPY package*.json ./
 
-# Install all dependencies (including devDependencies for building)
+# Install dependencies
 RUN npm ci && npm cache clean --force
 
-# Copy source code and build configuration
+# Copy source code
 COPY src/ src/
-COPY tsconfig.json ./
-COPY server.js ./
 COPY .env.example ./
-
-# Build TypeScript
-RUN npm run build
-
-# Remove devDependencies after build
-RUN npm prune --production
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
@@ -36,5 +28,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "try { require('http').get('http://localhost:3000/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)); } catch(e) { process.exit(1); }"
 
-# Start the server
-CMD ["node", "server.js"]
+# Start the simple OAuth server
+CMD ["node", "src/simple-index.js"]
