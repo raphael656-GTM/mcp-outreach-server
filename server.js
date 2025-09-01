@@ -449,12 +449,18 @@ app.get('/callback', (req, res) => {
   `);
 });
 
-// Health check
+// Health check with environment debug
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    mcp_initialized: isInitialized
+    mcp_initialized: isInitialized,
+    env_check: {
+      OUTREACH_CLIENT_ID: process.env.OUTREACH_CLIENT_ID ? 'Set' : 'Missing',
+      OUTREACH_CLIENT_SECRET: process.env.OUTREACH_CLIENT_SECRET ? 'Set' : 'Missing', 
+      OUTREACH_REFRESH_TOKEN: process.env.OUTREACH_REFRESH_TOKEN ? 'Set' : 'Missing',
+      OUTREACH_REDIRECT_URI: process.env.OUTREACH_REDIRECT_URI ? 'Set' : 'Missing'
+    }
   });
 });
 
