@@ -1,27 +1,67 @@
-# 📚 Complete Guide: Deploying Outreach MCP Server to Claude Desktop
+# 📚 Complete Guide: Outreach MCP Server - Seamless Sales Outreach via Claude
 
-## 🎯 Overview
-This guide provides **three different methods** to deploy the Outreach MCP Server to your Claude Desktop application, ranging from the simplest remote setup to full local installation.
+## 🎯 Mission
+**Make it seamless for sales reps to manage outreach tasks directly via Claude.** No switching between applications, no complex interfaces - just natural conversation with Claude to handle all Outreach operations.
+
+## 🏢 Current Status
+- ✅ **Phase 3 Enterprise** deployment ready with 29 tools
+- 🎯 **Next Goal**: Scale deployment across 7+ different users
+- 🔧 **Current Issue**: Debugging Claude Desktop validation errors
+
+## 🚀 Phase 3 Enterprise Features (Ready for Multi-User Deployment)
+
+### **29 Total Tools Available:**
+- **12 Core Outreach Tools**: Sequences, prospects, accounts, mailboxes
+- **9 Advanced Management**: Full CRUD operations, templates, bulk actions  
+- **4 Enterprise Monitoring**: Health status, error analytics, rate limiting
+- **4 Performance Features**: Auto-retry, error recovery, health monitoring
+
+### **Enterprise-Grade Infrastructure:**
+- ✅ **Rate Limiting** with exponential backoff and jitter
+- ✅ **Enhanced Error Handling** with automatic recovery strategies
+- ✅ **Health Monitoring** with component-level status tracking
+- ✅ **Performance Optimization** for high-volume operations
+
+### **Multi-User Ready:**
+- ✅ **Scalable Architecture** supporting 7+ concurrent users
+- ✅ **Individual Authentication** via personal OAuth tokens
+- ✅ **Centralized Deployment** on Railway cloud infrastructure
+- ✅ **Monitoring & Analytics** for deployment health across users
 
 ---
 
-## 🚀 Method 1: Remote Server (Easiest - 2 Minutes)
+## 🐛 Current Debugging: Claude Desktop Validation Errors
+
+**Issue**: Claude Desktop showing validation errors with proxy scripts
+**Debug Approach**: Created debug proxy to identify JSON-RPC 2.0 compliance issues
+**Status**: In progress - debug logs needed from users
+
+---
+
+## 🚀 Method 1: Phase 3 Enterprise Remote (Current - 29 Tools)
 **Best for**: Users who want immediate access without any setup or API keys
 
 ### What You Get
 - ✅ **No OAuth setup required** - Authentication handled remotely
-- ✅ **24 pre-configured tools** ready to use
+- ✅ **29 enterprise tools** ready to use (12 core + 9 advanced + 8 enterprise)
 - ✅ **Zero maintenance** - Updates handled automatically
+- ✅ **Enterprise monitoring** - Health checks, error analytics, rate limiting
 - ✅ **No API keys needed** - Everything managed server-side
 
 ### Setup Steps
 
-1. **Download the Bridge Script**
+1. **Download the Phase 3 Enterprise Script**
    ```bash
-   # Download the proxy script from the repository
-   curl -O https://raw.githubusercontent.com/raphael656-GTM/mcp-outreach-server/main/outreach-proxy.cjs
+   # Download the Phase 3 enterprise proxy script
+   curl -O https://raw.githubusercontent.com/raphael656-GTM/mcp-outreach-server/main/outreach-proxy-phase3.cjs
+   chmod +x outreach-proxy-phase3.cjs
    ```
-   Or manually download `outreach-proxy.cjs` from the repository
+   
+   **If experiencing validation errors, use debug version:**
+   ```bash
+   curl -O https://raw.githubusercontent.com/raphael656-GTM/mcp-outreach-server/main/outreach-proxy-debug.cjs
+   chmod +x outreach-proxy-debug.cjs
+   ```
 
 2. **Add to Claude Desktop Configuration**
    
@@ -151,6 +191,48 @@ Edit your Claude config file and add:
 
 1. Restart Claude Desktop
 2. Test with: "List my Outreach sequences"
+
+---
+
+## 🏢 Multi-User Deployment Strategy (7+ Users)
+
+### **Deployment Architecture:**
+```
+7 Sales Reps → Individual Claude Desktop → Phase 3 Proxy Scripts → Railway Server → Outreach API
+```
+
+### **Scaling Approach:**
+1. **Centralized Server**: Single Railway deployment handles all users
+2. **Individual Proxy Scripts**: Each user has their own proxy configuration  
+3. **Personal Authentication**: Each user connects with their own Outreach OAuth
+4. **Shared Monitoring**: Enterprise health monitoring across all users
+
+### **User Onboarding Process:**
+```bash
+# Step 1: User downloads their proxy script
+curl -O https://raw.githubusercontent.com/raphael656-GTM/mcp-outreach-server/main/outreach-proxy-phase3.cjs
+
+# Step 2: Configure Claude Desktop with unique server name
+{
+  "mcpServers": {
+    "outreach-[USERNAME]": {
+      "command": "node",
+      "args": ["/path/to/outreach-proxy-phase3.cjs"]
+    }
+  }
+}
+
+# Step 3: Test with health check
+"Check my Outreach server health status"
+```
+
+### **Monitoring Dashboard (Coming Next):**
+- 📊 **User Activity**: Track tool usage per user
+- 🚨 **Error Alerts**: Monitor validation errors across deployments  
+- ⚡ **Performance Metrics**: Response times and success rates
+- 🔄 **Health Status**: Real-time status of all user connections
+
+### **Current Blocker**: Claude Desktop validation errors need debugging before scaling
 
 ---
 
