@@ -731,6 +731,18 @@ class OutreachMCPServer {
             }
           }
         },
+        {
+          name: 'create_sequence_template',
+          description: 'Link a template to a sequence step',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              sequenceStepId: { type: 'number', description: 'Sequence step ID' },
+              templateId: { type: 'number', description: 'Template ID to link' }
+            },
+            required: ['sequenceStepId', 'templateId']
+          }
+        },
         
         // SNIPPETS
         {
@@ -1284,10 +1296,11 @@ class OutreachMCPServer {
             });
             sequence = sequenceResponse.data.data;
 
-            // 3. Link templates to sequence steps with timing
+            // 3. Create sequence steps and link templates
             if (createdTemplates.length > 0) {
               for (const templateData of createdTemplates) {
-                await outreachClient.post('/sequenceSteps', {
+                // Create the sequence step
+                const stepResponse = await outreachClient.post('/sequenceSteps', {
                   data: {
                     type: 'sequenceStep',
                     attributes: {
@@ -1296,7 +1309,17 @@ class OutreachMCPServer {
                       interval: templateData.intervalDays
                     },
                     relationships: {
-                      sequence: { data: { type: 'sequence', id: sequence.id } },
+                      sequence: { data: { type: 'sequence', id: sequence.id } }
+                    }
+                  }
+                });
+
+                // Link the template to the step using sequenceTemplate
+                await outreachClient.post('/sequenceTemplates', {
+                  data: {
+                    type: 'sequenceTemplate',
+                    relationships: {
+                      sequenceStep: { data: { type: 'sequenceStep', id: stepResponse.data.data.id } },
                       template: { data: { type: 'template', id: templateData.template.id } }
                     }
                   }
@@ -1406,6 +1429,18 @@ class OutreachMCPServer {
         case 'list_sequence_templates': {
           const response = await outreachClient.get('/sequenceTemplates', { params: { 'page[size]': args.limit || 50 } });
           return this.formatResponse('sequenceTemplates', response.data.data);
+        }
+        case 'create_sequence_template': {
+          const response = await outreachClient.post('/sequenceTemplates', {
+            data: {
+              type: 'sequenceTemplate',
+              relationships: {
+                sequenceStep: { data: { type: 'sequenceStep', id: args.sequenceStepId.toString() } },
+                template: { data: { type: 'template', id: args.templateId.toString() } }
+              }
+            }
+          });
+          return this.formatResponse('sequenceTemplate', response.data.data, true);
         }
         
         // SNIPPETS
@@ -1559,9 +1594,10 @@ class OutreachMCPServer {
             });
             sequence = sequenceResponse.data.data;
 
-            // 3. Create sequence steps linking templates with proper timing
+            // 3. Create sequence steps and link templates
             const createdSteps = [];
             for (const templateData of createdTemplates) {
+              // Create the sequence step
               const stepResponse = await outreachClient.post('/sequenceSteps', {
                 data: {
                   type: 'sequenceStep',
@@ -1571,11 +1607,22 @@ class OutreachMCPServer {
                     interval: templateData.delayDays
                   },
                   relationships: {
-                    sequence: { data: { type: 'sequence', id: sequence.id } },
+                    sequence: { data: { type: 'sequence', id: sequence.id } }
+                  }
+                }
+              });
+              
+              // Link the template to the step using sequenceTemplate
+              await outreachClient.post('/sequenceTemplates', {
+                data: {
+                  type: 'sequenceTemplate',
+                  relationships: {
+                    sequenceStep: { data: { type: 'sequenceStep', id: stepResponse.data.data.id } },
                     template: { data: { type: 'template', id: templateData.template.id } }
                   }
                 }
               });
+              
               createdSteps.push(stepResponse.data.data);
             }
 
