@@ -1410,7 +1410,7 @@ class OutreachMCPServer {
           return this.formatResponse('prospects', matchingProspects);
         }
         case 'bulk_search_prospects': {
-          const { prospects, concurrency = 5, matchThreshold = 0.7, includeAlternatives = true } = args;
+          const { prospects, concurrency = 5 } = args;
           
           // Validate input
           if (!Array.isArray(prospects) || prospects.length === 0) {
@@ -1422,19 +1422,42 @@ class OutreachMCPServer {
           }
           
           const startTime = Date.now();
-          const results = await this.executeBulkSearch(prospects, outreachClient, {
-            concurrency,
-            matchThreshold,
-            includeAlternatives
-          });
+          const results = [];
+          
+          // Process prospects in batches for concurrency control
+          for (let i = 0; i < prospects.length; i += concurrency) {
+            const batch = prospects.slice(i, i + concurrency);
+            const batchPromises = batch.map(prospect => 
+              this.simpleProspectSearch(prospect, outreachClient)
+            );
+            
+            const batchResults = await Promise.allSettled(batchPromises);
+            
+            // Convert Promise.allSettled results to our format
+            batchResults.forEach((result, index) => {
+              if (result.status === 'fulfilled') {
+                results.push(result.value);
+              } else {
+                results.push({
+                  inputData: batch[index],
+                  status: 'error',
+                  confidence: 0,
+                  matchedProspects: [],
+                  searchStrategy: 'none',
+                  attempts: 0,
+                  error: result.reason?.message || 'Unknown error'
+                });
+              }
+            });
+          }
           
           const summary = {
             totalSearched: prospects.length,
             successful: results.filter(r => r.status === 'found').length,
             notFound: results.filter(r => r.status === 'not_found').length,
             multipleMatches: results.filter(r => r.status === 'multiple_candidates').length,
-            keywordMatches: results.filter(r => ['title_keywords', 'broad_match'].includes(r.searchStrategy)).length,
-            averageConfidence: this.calculateAverageConfidence(results),
+            keywordMatches: results.filter(r => r.searchStrategy && r.searchStrategy.includes('keyword')).length,
+            averageConfidence: results.length > 0 ? results.reduce((sum, r) => sum + (r.confidence || 0), 0) / results.length : 0,
             processingTimeMs: Date.now() - startTime
           };
           
@@ -2008,7 +2031,311 @@ class OutreachMCPServer {
     }
   }
 
-  // ===== BULK SEARCH IMPLEMENTATION =====
+  // ===== SIMPLE & RELIABLE BULK SEARCH =====
+  
+  async simpleProspectSearch(prospect, outreachClient) {
+    try {
+      // Strategy 1: Try firstName + lastName first (most reliable)
+      const nameResult = await this.searchByNameOnly(prospect, outreachClient);
+      if (nameResult.status === 'found') return nameResult;
+      
+      // Strategy 2: Try firstName + lastName + company if no unique match
+      if (prospect.company) {
+        const nameCompanyResult = await this.searchByNameAndCompany(prospect, outreachClient);
+        if (nameCompanyResult.status === 'found') return nameCompanyResult;
+      }
+      
+      // Strategy 3: Try firstName + lastName + accountName
+      if (prospect.accountName && prospect.accountName !== prospect.company) {
+        const nameAccountResult = await this.searchByNameAndAccount(prospect, outreachClient);
+        if (nameAccountResult.status === 'found') return nameAccountResult;
+      }
+      
+      // Strategy 4: Try email if provided
+      if (prospect.email) {
+        const emailResult = await this.searchByEmailOnly(prospect, outreachClient);
+        if (emailResult.status === 'found') return emailResult;
+      }
+      
+      // Strategy 5: Try just first name with company (broader search)
+      if (prospect.company) {
+        const firstNameResult = await this.searchByFirstNameAndCompany(prospect, outreachClient);
+        if (firstNameResult.status === 'found') return firstNameResult;
+      }
+      
+      // Strategy 6: Try just last name with company (broader search)
+      if (prospect.company) {
+        const lastNameResult = await this.searchByLastNameAndCompany(prospect, outreachClient);
+        if (lastNameResult.status === 'found') return lastNameResult;
+      }
+      
+      // If we get here, prospect was not found
+      return {
+        inputData: prospect,
+        status: 'not_found',
+        matchedProspects: [],
+        searchStrategy: 'exhausted_all_strategies',
+        attempts: 6
+      };
+      
+    } catch (error) {
+      return {
+        inputData: prospect,
+        status: 'error',
+        matchedProspects: [],
+        searchStrategy: 'error',
+        attempts: 0,
+        error: error.message
+      };
+    }
+  }
+  
+  normalizeCompanyName(company) {
+    if (!company) return '';
+    return company
+      .toLowerCase()
+      .replace(/\b(inc|corp|llc|ltd|co|corporation|incorporated|limited)\b\.?/g, '')
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  async searchByNameOnly(prospect, outreachClient) {
+    const params = {
+      'filter[firstName]': prospect.firstName,
+      'filter[lastName]': prospect.lastName,
+      'page[size]': 10
+    };
+    
+    const response = await outreachClient.get('/prospects', { params });
+    const matches = response.data.data;
+    
+    if (matches.length === 1) {
+      return {
+        inputData: prospect,
+        status: 'found',
+        confidence: 1.0,
+        matchedProspect: matches[0],
+        candidates: [],
+        searchStrategy: 'exact_name',
+        attempts: 1,
+        titleKeywordsUsed: []
+      };
+    } else if (matches.length > 1) {
+      // If we have multiple matches and company info, try to find exact company match
+      if (prospect.company) {
+        const companyMatches = matches.filter(match => {
+          const company = match.attributes.company || match.attributes.accountName || '';
+          return this.normalizeCompanyName(company) === this.normalizeCompanyName(prospect.company);
+        });
+        
+        if (companyMatches.length === 1) {
+          return {
+            inputData: prospect,
+            status: 'found',
+            confidence: 0.95,
+            matchedProspect: companyMatches[0],
+            candidates: matches.filter(m => m.id !== companyMatches[0].id).slice(0, 3),
+            searchStrategy: 'name_with_company_filter',
+            attempts: 1,
+            titleKeywordsUsed: []
+          };
+        }
+      }
+      
+      return {
+        inputData: prospect,
+        status: 'multiple_candidates',
+        confidence: 0.7,
+        matchedProspect: null,
+        candidates: matches.slice(0, 5),
+        searchStrategy: 'name_only_multiple',
+        attempts: 1,
+        titleKeywordsUsed: []
+      };
+    }
+    
+    return { 
+      inputData: prospect,
+      status: 'not_found',
+      confidence: 0,
+      matchedProspect: null,
+      candidates: [],
+      searchStrategy: 'none',
+      attempts: 1,
+      titleKeywordsUsed: []
+    };
+  }
+  
+  async searchByNameAndCompany(prospect, outreachClient) {
+    const params = {
+      'filter[firstName]': prospect.firstName,
+      'filter[lastName]': prospect.lastName,
+      'page[size]': 10
+    };
+    
+    const response = await outreachClient.get('/prospects', { params });
+    const matches = response.data.data;
+    
+    // Filter by company match client-side since company filter doesn't work
+    const companyMatches = matches.filter(p => 
+      p.attributes.company && 
+      p.attributes.company.toLowerCase().includes(prospect.company.toLowerCase())
+    );
+    
+    if (companyMatches.length === 1) {
+      return {
+        inputData: prospect,
+        status: 'found',
+        matchedProspects: companyMatches,
+        searchStrategy: 'name_and_company',
+        attempts: 2
+      };
+    } else if (companyMatches.length > 1) {
+      return {
+        inputData: prospect,
+        status: 'multiple_matches',
+        matchedProspects: companyMatches.slice(0, 5),
+        searchStrategy: 'name_and_company_multiple',
+        attempts: 2
+      };
+    }
+    
+    return { status: 'no_match', matches: companyMatches };
+  }
+  
+  async searchByNameAndAccount(prospect, outreachClient) {
+    const params = {
+      'filter[firstName]': prospect.firstName,
+      'filter[lastName]': prospect.lastName,
+      'filter[account][name]': prospect.accountName,
+      'page[size]': 10
+    };
+    
+    try {
+      const response = await outreachClient.get('/prospects', { params });
+      const matches = response.data.data;
+      
+      if (matches.length === 1) {
+        return {
+          inputData: prospect,
+          status: 'found',
+          matchedProspects: matches,
+          searchStrategy: 'name_and_account',
+          attempts: 3
+        };
+      } else if (matches.length > 1) {
+        return {
+          inputData: prospect,
+          status: 'multiple_matches',
+          matchedProspects: matches.slice(0, 5),
+          searchStrategy: 'name_and_account_multiple',
+          attempts: 3
+        };
+      }
+    } catch (error) {
+      // Account filter might not work, skip this strategy
+      console.warn('Account filter failed:', error.message);
+    }
+    
+    return { status: 'no_match', matches: [] };
+  }
+  
+  async searchByEmailOnly(prospect, outreachClient) {
+    const params = {
+      'filter[emails]': prospect.email,
+      'page[size]': 10
+    };
+    
+    const response = await outreachClient.get('/prospects', { params });
+    const matches = response.data.data;
+    
+    if (matches.length >= 1) {
+      return {
+        inputData: prospect,
+        status: 'found',
+        matchedProspects: matches,
+        searchStrategy: 'email_only',
+        attempts: 4
+      };
+    }
+    
+    return { status: 'no_match', matches };
+  }
+  
+  async searchByFirstNameAndCompany(prospect, outreachClient) {
+    const params = {
+      'filter[firstName]': prospect.firstName,
+      'page[size]': 20
+    };
+    
+    const response = await outreachClient.get('/prospects', { params });
+    const matches = response.data.data;
+    
+    // Filter by company match client-side
+    const companyMatches = matches.filter(p => 
+      p.attributes.company && 
+      p.attributes.company.toLowerCase().includes(prospect.company.toLowerCase())
+    );
+    
+    if (companyMatches.length === 1) {
+      return {
+        inputData: prospect,
+        status: 'found',
+        matchedProspects: companyMatches,
+        searchStrategy: 'first_name_and_company',
+        attempts: 5
+      };
+    } else if (companyMatches.length > 1) {
+      return {
+        inputData: prospect,
+        status: 'multiple_matches',
+        matchedProspects: companyMatches.slice(0, 5),
+        searchStrategy: 'first_name_and_company_multiple',
+        attempts: 5
+      };
+    }
+    
+    return { status: 'no_match', matches: companyMatches };
+  }
+  
+  async searchByLastNameAndCompany(prospect, outreachClient) {
+    const params = {
+      'filter[lastName]': prospect.lastName,
+      'page[size]': 20
+    };
+    
+    const response = await outreachClient.get('/prospects', { params });
+    const matches = response.data.data;
+    
+    // Filter by company match client-side
+    const companyMatches = matches.filter(p => 
+      p.attributes.company && 
+      p.attributes.company.toLowerCase().includes(prospect.company.toLowerCase())
+    );
+    
+    if (companyMatches.length === 1) {
+      return {
+        inputData: prospect,
+        status: 'found',
+        matchedProspects: companyMatches,
+        searchStrategy: 'last_name_and_company',
+        attempts: 6
+      };
+    } else if (companyMatches.length > 1) {
+      return {
+        inputData: prospect,
+        status: 'multiple_matches',
+        matchedProspects: companyMatches.slice(0, 5),
+        searchStrategy: 'last_name_and_company_multiple',
+        attempts: 6
+      };
+    }
+    
+    return { status: 'no_match', matches: companyMatches };
+  }
+
+  // ===== OLD COMPLEX IMPLEMENTATION (KEEPING FOR REFERENCE) =====
   
   async executeBulkSearch(prospects, outreachClient, options) {
     const { concurrency, matchThreshold, includeAlternatives } = options;
