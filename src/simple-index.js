@@ -909,6 +909,34 @@ class OutreachMCPServer {
             required: ['sequenceName', 'emailTemplates']
           }
         },
+        {
+          name: 'create_sequence_manual_setup',
+          description: 'Create sequence with manual template linking instructions (workaround for OAuth scope limitations)',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              sequenceName: { type: 'string', description: 'Name of the sequence' },
+              sequenceDescription: { type: 'string', description: 'Description of the sequence' },
+              emailTemplates: {
+                type: 'array',
+                description: 'Array of email templates to create',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', description: 'Template name' },
+                    subject: { type: 'string', description: 'Email subject line' },
+                    bodyText: { type: 'string', description: 'Plain text email body' },
+                    bodyHtml: { type: 'string', description: 'HTML email body (optional)' },
+                    stepOrder: { type: 'number', description: 'Order of this step in sequence (1, 2, 3...)' },
+                    delayDays: { type: 'number', description: 'Days to wait before sending this email', default: 3 }
+                  },
+                  required: ['name', 'subject', 'bodyText', 'stepOrder']
+                }
+              }
+            },
+            required: ['sequenceName', 'emailTemplates']
+          }
+        },
         
         // USERS
         {
@@ -1547,6 +1575,119 @@ class OutreachMCPServer {
         case 'get_current_user': {
           const response = await outreachClient.get('/users/me');
           return this.formatResponse('currentUser', response.data.data);
+        }
+
+        case 'create_sequence_manual_setup': {
+          // Workaround for OAuth scope limitations - creates all components but provides manual linking instructions
+          const createdTemplates = [];
+          let sequence = null;
+          const createdSteps = [];
+
+          try {
+            // 1. Create all email templates
+            for (const emailTemplate of args.emailTemplates) {
+              const templateResponse = await outreachClient.post('/templates', {
+                data: {
+                  type: 'template',
+                  attributes: {
+                    name: emailTemplate.name,
+                    subject: emailTemplate.subject,
+                    bodyHtml: emailTemplate.bodyHtml || emailTemplate.bodyText
+                  }
+                }
+              });
+              
+              createdTemplates.push({
+                template: templateResponse.data.data,
+                stepOrder: emailTemplate.stepOrder,
+                delayDays: emailTemplate.delayDays || 3
+              });
+            }
+
+            // 2. Create sequence
+            const sequenceResponse = await outreachClient.post('/sequences', {
+              data: {
+                type: 'sequence',
+                attributes: {
+                  name: args.sequenceName,
+                  description: args.sequenceDescription || `Email sequence with ${createdTemplates.length} steps`,
+                  shareType: 'private'
+                }
+              }
+            });
+            sequence = sequenceResponse.data.data;
+
+            // 3. Create sequence steps (without template linking due to OAuth scope limitation)
+            for (const templateData of createdTemplates.sort((a, b) => a.stepOrder - b.stepOrder)) {
+              const stepResponse = await outreachClient.post('/sequenceSteps', {
+                data: {
+                  type: 'sequenceStep',
+                  attributes: {
+                    order: templateData.stepOrder,
+                    stepType: 'auto_email',
+                    interval: templateData.delayDays
+                  },
+                  relationships: {
+                    sequence: { data: { type: 'sequence', id: sequence.id } }
+                  }
+                }
+              });
+              createdSteps.push({
+                step: stepResponse.data.data,
+                template: templateData.template
+              });
+            }
+
+            // Return success with manual instructions
+            return this.formatResponse('sequenceManualSetup', {
+              success: true,
+              sequence: sequence,
+              templates: createdTemplates.map(t => t.template),
+              steps: createdSteps.map(s => s.step),
+              message: 'Sequence and templates created successfully. Manual template linking required due to OAuth scope limitations.',
+              manualInstructions: {
+                summary: `Created sequence "${args.sequenceName}" with ${createdTemplates.length} templates and ${createdSteps.length} steps`,
+                nextSteps: [
+                  '1. Open Outreach and navigate to your sequence',
+                  '2. Edit each sequence step to add the corresponding email template',
+                  '3. Match templates to steps based on the mapping below'
+                ],
+                templateMapping: createdSteps.map(item => ({
+                  stepOrder: item.step.attributes.order,
+                  stepId: item.step.id,
+                  templateId: item.template.id,
+                  templateName: item.template.attributes.name,
+                  templateSubject: item.template.attributes.subject,
+                  instruction: `Step ${item.step.attributes.order}: Link template "${item.template.attributes.name}" (ID: ${item.template.id})`
+                }))
+              },
+              oauthScopeHelp: {
+                missingScope: 'sequenceTemplates.write',
+                solution: 'Update OAuth application with sequenceTemplates.write scope to enable automatic template linking',
+                helpFile: 'See OAUTH-SCOPE-UPDATE.md for detailed instructions'
+              }
+            }, true);
+
+          } catch (error) {
+            // Cleanup on error
+            for (const templateData of createdTemplates) {
+              try {
+                await outreachClient.delete(`/templates/${templateData.template.id}`);
+              } catch (rollbackError) {
+                console.error('Template cleanup failed:', rollbackError);
+              }
+            }
+            
+            if (sequence) {
+              try {
+                await outreachClient.delete(`/sequences/${sequence.id}`);
+              } catch (rollbackError) {
+                console.error('Sequence cleanup failed:', rollbackError);
+              }
+            }
+            
+            throw new Error(`Sequence setup failed: ${error.message}. All resources cleaned up.`);
+          }
         }
 
         case 'create_sequence_with_email_templates': {

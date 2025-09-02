@@ -75,11 +75,11 @@ async getAccessToken(refreshToken) {
 CMD ["node", "src/simple-index.js"]
 ```
 
-### **Working OAuth Credentials**
+### **OAuth Credentials (Set as Environment Variables)**
 ```bash
-OUTREACH_CLIENT_ID=huKx35FSVCR1RXClVCLsorRq.Ljk9ZyPyfo2qqW~xeug
-OUTREACH_CLIENT_SECRET=jei[VGvlj9l&]]qO*.Zlh#v!V=pGRFytVq|U{I-tXa6
-OUTREACH_REFRESH_TOKEN=shCYvyYnQ6ON_RJLmOAbGhKlqElJNI7NNhM_EKY-c-s
+OUTREACH_CLIENT_ID=your_client_id_here
+OUTREACH_CLIENT_SECRET=your_client_secret_here
+OUTREACH_REFRESH_TOKEN=your_refresh_token_here
 ```
 
 ## 🔧 **Claude Desktop Integration**
@@ -93,9 +93,9 @@ OUTREACH_REFRESH_TOKEN=shCYvyYnQ6ON_RJLmOAbGhKlqElJNI7NNhM_EKY-c-s
       "args": ["/Users/raphaelberrebi/mcp-outreach-server/src/simple-index.js"],
       "cwd": "/Users/raphaelberrebi/mcp-outreach-server",
       "env": {
-        "OUTREACH_CLIENT_ID": "huKx35FSVCR1RXClVCLsorRq.Ljk9ZyPyfo2qqW~xeug",
-        "OUTREACH_CLIENT_SECRET": "jei[VGvlj9l&]]qO*.Zlh#v!V=pGRFytVq|U{I-tXa6",
-        "OUTREACH_REFRESH_TOKEN": "shCYvyYnQ6ON_RJLmOAbGhKlqElJNI7NNhM_EKY-c-s"
+        "OUTREACH_CLIENT_ID": "your_client_id_here",
+        "OUTREACH_CLIENT_SECRET": "your_client_secret_here",
+        "OUTREACH_REFRESH_TOKEN": "your_refresh_token_here"
       }
     }
   }
@@ -111,7 +111,7 @@ OUTREACH_REFRESH_TOKEN=shCYvyYnQ6ON_RJLmOAbGhKlqElJNI7NNhM_EKY-c-s
       "args": ["/Users/raphaelberrebi/mcp-outreach-server/simple-outreach-proxy.js"],
       "env": {
         "RAILWAY_URL": "https://mcp-outreach-server-production.up.railway.app",
-        "OUTREACH_REFRESH_TOKEN": "shCYvyYnQ6ON_RJLmOAbGhKlqElJNI7NNhM_EKY-c-s"
+        "OUTREACH_REFRESH_TOKEN": "your_refresh_token_here"
       }
     }
   }
@@ -122,13 +122,13 @@ OUTREACH_REFRESH_TOKEN=shCYvyYnQ6ON_RJLmOAbGhKlqElJNI7NNhM_EKY-c-s
 
 ### **Local STDIO Mode Test**
 ```bash
-OUTREACH_CLIENT_ID="..." OUTREACH_CLIENT_SECRET="..." OUTREACH_REFRESH_TOKEN="..." node src/simple-index.js
+OUTREACH_CLIENT_ID="your_id" OUTREACH_CLIENT_SECRET="your_secret" OUTREACH_REFRESH_TOKEN="your_token" node src/simple-index.js
 # Should output: "Simple Outreach MCP server running on stdio"
 ```
 
 ### **Local HTTP Mode Test**
 ```bash
-PORT=3000 OUTREACH_CLIENT_ID="..." OUTREACH_CLIENT_SECRET="..." OUTREACH_REFRESH_TOKEN="..." node src/simple-index.js
+PORT=3000 OUTREACH_CLIENT_ID="your_id" OUTREACH_CLIENT_SECRET="your_secret" OUTREACH_REFRESH_TOKEN="your_token" node src/simple-index.js
 # Test: curl http://localhost:3000/health
 # Should return: {"status":"healthy","service":"outreach-mcp-server","version":"1.0.0"}
 ```
@@ -141,7 +141,7 @@ curl https://mcp-outreach-server-production.up.railway.app/health
 # MCP endpoint test
 curl -X POST https://mcp-outreach-server-production.up.railway.app/mcp \
   -H "Content-Type: application/json" \
-  -H "X-Outreach-Refresh-Token: shCYvyYnQ6ON_RJLmOAbGhKlqElJNI7NNhM_EKY-c-s" \
+  -H "X-Outreach-Refresh-Token: your_refresh_token_here" \
   -d '{"method": "tools/list"}'
 ```
 
