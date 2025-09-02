@@ -1306,7 +1306,7 @@ class OutreachMCPServer {
                   template: templateResponse.data.data,
                   order: emailStep.order,
                   intervalDays: emailStep.intervalDays || 3,
-                  intervalMinutes: (emailStep.intervalDays || 3) * 24 * 60  // Convert days to minutes for Outreach API
+                  intervalMinutes: (emailStep.intervalDays || 3) * 1440  // 1440 minutes = 1 day (24 * 60)
                 });
               }
             }
@@ -1318,7 +1318,8 @@ class OutreachMCPServer {
                 attributes: {
                   name: args.name,
                   description: args.description || '',
-                  shareType: 'private'
+                  shareType: 'private',
+                  scheduleType: 'interval'  // Ensure interval-based scheduling
                 }
               }
             });
@@ -1360,7 +1361,7 @@ class OutreachMCPServer {
               templates: createdTemplates.map(t => t.template),
               success: true,
               message: `Sequence created with ${createdTemplates.length} email templates`,
-              sequenceUrl: `https://app.outreach.io/sequences/${sequence.id}`
+              sequenceUrl: `https://web.outreach.io/sequences/${sequence.id}/overview`
             }, true);
 
           } catch (error) {
@@ -1613,7 +1614,8 @@ class OutreachMCPServer {
                 attributes: {
                   name: args.sequenceName,
                   description: args.sequenceDescription || `Email sequence with ${createdTemplates.length} steps`,
-                  shareType: 'private'
+                  shareType: 'private',
+                  scheduleType: 'interval'
                 }
               }
             });
@@ -1728,7 +1730,8 @@ class OutreachMCPServer {
                 attributes: {
                   name: args.sequenceName,
                   description: args.sequenceDescription || `Email sequence with ${createdTemplates.length} steps`,
-                  shareType: 'private'
+                  shareType: 'private',
+                  scheduleType: 'interval'
                 }
               }
             });
@@ -1778,7 +1781,7 @@ class OutreachMCPServer {
                 sequenceName: sequence.attributes.name,
                 templateCount: createdTemplates.length,
                 stepCount: createdSteps.length,
-                sequenceUrl: `https://app.outreach.io/sequences/${sequence.id}`,
+                sequenceUrl: `https://web.outreach.io/sequences/${sequence.id}/overview`,
                 emailFlow: createdTemplates.map(t => ({
                   order: t.stepOrder,
                   templateName: t.template.attributes.name,
@@ -1831,13 +1834,12 @@ class OutreachMCPServer {
   formatEmailBody(bodyText) {
     if (!bodyText) return '';
     
-    // Convert plain text to HTML with proper spacing
+    // Format for Outreach - ensure proper paragraph spacing
     return bodyText
       .split('\n\n')  // Split on double line breaks (paragraphs)
       .map(paragraph => paragraph.trim())
       .filter(paragraph => paragraph.length > 0)
-      .map(paragraph => `<p>${paragraph.replace(/\n/g, '<br>')}</p>`)  // Convert single line breaks to <br>
-      .join('\n');
+      .join('\n\n');  // Rejoin with double line breaks for paragraph spacing
   }
 
   formatResponse(resourceType, data, created = false) {
