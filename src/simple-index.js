@@ -1298,14 +1298,15 @@ class OutreachMCPServer {
                     attributes: {
                       name: emailStep.templateName,
                       subject: emailStep.subject,
-                      bodyHtml: emailStep.bodyHtml || emailStep.bodyText
+                      bodyHtml: emailStep.bodyHtml || this.formatEmailBody(emailStep.bodyText)
                     }
                   }
                 });
                 createdTemplates.push({
                   template: templateResponse.data.data,
                   order: emailStep.order,
-                  intervalDays: emailStep.intervalDays || 3
+                  intervalDays: emailStep.intervalDays || 3,
+                  intervalMinutes: (emailStep.intervalDays || 3) * 24 * 60  // Convert days to minutes for Outreach API
                 });
               }
             }
@@ -1333,7 +1334,7 @@ class OutreachMCPServer {
                     attributes: {
                       order: templateData.order,
                       stepType: 'auto_email',
-                      interval: templateData.intervalDays
+                      interval: templateData.intervalMinutes  // Using minutes as required by Outreach API
                     },
                     relationships: {
                       sequence: { data: { type: 'sequence', id: sequence.id } }
@@ -1358,7 +1359,8 @@ class OutreachMCPServer {
               sequence: sequence,
               templates: createdTemplates.map(t => t.template),
               success: true,
-              message: `Sequence created with ${createdTemplates.length} email templates`
+              message: `Sequence created with ${createdTemplates.length} email templates`,
+              sequenceUrl: `https://app.outreach.io/sequences/${sequence.id}`
             }, true);
 
           } catch (error) {
@@ -1625,7 +1627,7 @@ class OutreachMCPServer {
                   attributes: {
                     order: templateData.stepOrder,
                     stepType: 'auto_email',
-                    interval: templateData.delayDays
+                    interval: templateData.delayDays * 24 * 60  // Convert days to minutes for Outreach API
                   },
                   relationships: {
                     sequence: { data: { type: 'sequence', id: sequence.id } }
@@ -1742,7 +1744,7 @@ class OutreachMCPServer {
                   attributes: {
                     order: templateData.stepOrder,
                     stepType: 'auto_email',
-                    interval: templateData.delayDays
+                    interval: templateData.delayDays * 24 * 60  // Convert days to minutes for Outreach API
                   },
                   relationships: {
                     sequence: { data: { type: 'sequence', id: sequence.id } }
@@ -1776,6 +1778,7 @@ class OutreachMCPServer {
                 sequenceName: sequence.attributes.name,
                 templateCount: createdTemplates.length,
                 stepCount: createdSteps.length,
+                sequenceUrl: `https://app.outreach.io/sequences/${sequence.id}`,
                 emailFlow: createdTemplates.map(t => ({
                   order: t.stepOrder,
                   templateName: t.template.attributes.name,
@@ -1823,6 +1826,18 @@ class OutreachMCPServer {
         }]
       };
     }
+  }
+
+  formatEmailBody(bodyText) {
+    if (!bodyText) return '';
+    
+    // Convert plain text to HTML with proper spacing
+    return bodyText
+      .split('\n\n')  // Split on double line breaks (paragraphs)
+      .map(paragraph => paragraph.trim())
+      .filter(paragraph => paragraph.length > 0)
+      .map(paragraph => `<p>${paragraph.replace(/\n/g, '<br>')}</p>`)  // Convert single line breaks to <br>
+      .join('\n');
   }
 
   formatResponse(resourceType, data, created = false) {
