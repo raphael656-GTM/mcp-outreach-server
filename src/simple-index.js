@@ -585,6 +585,79 @@ class OutreachMCPServer {
             required: ['nameQuery']
           }
         },
+        {
+          name: 'bulk_search_prospects',
+          description: 'Search multiple prospects with 7-tier intelligent fallback strategy',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              prospects: {
+                type: 'array',
+                description: 'Array of prospects to search for',
+                items: {
+                  type: 'object',
+                  properties: {
+                    firstName: { type: 'string', description: 'First name of prospect' },
+                    lastName: { type: 'string', description: 'Last name of prospect' },
+                    company: { type: 'string', description: 'Company name' },
+                    accountName: { type: 'string', description: 'Account name (alternative to company)' },
+                    title: { type: 'string', description: 'Job title for keyword matching' },
+                    email: { type: 'string', description: 'Email for validation and domain matching' }
+                  },
+                  required: ['firstName', 'lastName']
+                }
+              },
+              concurrency: { 
+                type: 'number', 
+                description: 'Number of concurrent searches (1-10)', 
+                default: 5,
+                minimum: 1,
+                maximum: 10
+              },
+              matchThreshold: { 
+                type: 'number', 
+                description: 'Minimum confidence score for matches (0.0-1.0)', 
+                default: 0.7,
+                minimum: 0.0,
+                maximum: 1.0
+              },
+              includeAlternatives: {
+                type: 'boolean',
+                description: 'Include alternative candidate matches for low confidence results',
+                default: true
+              }
+            },
+            required: ['prospects']
+          }
+        },
+        {
+          name: 'search_prospects_with_fallback',
+          description: 'Search single prospect with intelligent 7-tier fallback',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              firstName: { type: 'string', description: 'First name of prospect' },
+              lastName: { type: 'string', description: 'Last name of prospect' },
+              company: { type: 'string', description: 'Company name' },
+              accountName: { type: 'string', description: 'Account name' },
+              title: { type: 'string', description: 'Job title' },
+              email: { type: 'string', description: 'Email address' },
+              includeAlternatives: { type: 'boolean', description: 'Include alternative matches', default: true }
+            },
+            required: ['firstName', 'lastName']
+          }
+        },
+        {
+          name: 'extract_title_keywords',
+          description: 'Extract searchable keywords from job titles',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              title: { type: 'string', description: 'Job title to extract keywords from' }
+            },
+            required: ['title']
+          }
+        },
         
         // SEQUENCES
         {
@@ -1336,6 +1409,50 @@ class OutreachMCPServer {
           
           return this.formatResponse('prospects', matchingProspects);
         }
+        case 'bulk_search_prospects': {
+          const { prospects, concurrency = 5, matchThreshold = 0.7, includeAlternatives = true } = args;
+          
+          // Validate input
+          if (!Array.isArray(prospects) || prospects.length === 0) {
+            throw new Error('Prospects array is required and must not be empty');
+          }
+          
+          if (prospects.length > 200) {
+            throw new Error('Maximum 200 prospects allowed per bulk search');
+          }
+          
+          const startTime = Date.now();
+          const results = await this.executeBulkSearch(prospects, outreachClient, {
+            concurrency,
+            matchThreshold,
+            includeAlternatives
+          });
+          
+          const summary = {
+            totalSearched: prospects.length,
+            successful: results.filter(r => r.status === 'found').length,
+            notFound: results.filter(r => r.status === 'not_found').length,
+            multipleMatches: results.filter(r => r.status === 'multiple_candidates').length,
+            keywordMatches: results.filter(r => ['title_keywords', 'broad_match'].includes(r.searchStrategy)).length,
+            averageConfidence: this.calculateAverageConfidence(results),
+            processingTimeMs: Date.now() - startTime
+          };
+          
+          return this.formatResponse('bulkSearchResults', { summary, results });
+        }
+        case 'search_prospects_with_fallback': {
+          const result = await this.searchProspectWithFallback(args, outreachClient);
+          return this.formatResponse('prospectSearch', result);
+        }
+        case 'extract_title_keywords': {
+          const keywords = this.extractTitleKeywords(args.title);
+          return this.formatResponse('titleKeywords', { 
+            originalTitle: args.title,
+            extractedKeywords: keywords,
+            searchTerms: keywords.map(k => k.term),
+            patterns: keywords.map(k => k.pattern)
+          });
+        }
         
         // SEQUENCES
         case 'list_sequences': {
@@ -1889,6 +2006,505 @@ class OutreachMCPServer {
         }]
       };
     }
+  }
+
+  // ===== BULK SEARCH IMPLEMENTATION =====
+  
+  async executeBulkSearch(prospects, outreachClient, options) {
+    const { concurrency, matchThreshold, includeAlternatives } = options;
+    const results = [];
+    
+    // Process prospects in batches for concurrency control
+    for (let i = 0; i < prospects.length; i += concurrency) {
+      const batch = prospects.slice(i, i + concurrency);
+      const batchPromises = batch.map(prospect => 
+        this.searchProspectWithFallback(prospect, outreachClient, { matchThreshold, includeAlternatives })
+      );
+      
+      const batchResults = await Promise.allSettled(batchPromises);
+      
+      // Convert Promise.allSettled results to our format
+      batchResults.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          results.push(result.value);
+        } else {
+          results.push({
+            inputData: batch[index],
+            status: 'error',
+            confidence: 0,
+            matchedProspect: null,
+            candidates: [],
+            searchStrategy: 'none',
+            attempts: 0,
+            error: result.reason?.message || 'Unknown error'
+          });
+        }
+      });
+    }
+    
+    return results;
+  }
+  
+  async searchProspectWithFallback(prospect, outreachClient, options = {}) {
+    const strategies = [
+      () => this.searchExactMatch(prospect, outreachClient),
+      () => this.searchNameAccount(prospect, outreachClient), 
+      () => this.searchFirstNameCompany(prospect, outreachClient),
+      () => this.searchLastNameCompany(prospect, outreachClient),
+      () => this.searchByEmail(prospect, outreachClient),
+      () => this.searchByTitleKeywords(prospect, outreachClient),
+      () => this.searchBroadKeywordMatch(prospect, outreachClient)
+    ];
+    
+    let attempts = 0;
+    
+    for (const strategy of strategies) {
+      attempts++;
+      try {
+        const result = await strategy();
+        if (result && result.status === 'found') {
+          result.attempts = attempts;
+          return result;
+        }
+        if (result && result.status === 'multiple_candidates' && result.candidates?.length > 0) {
+          result.attempts = attempts;
+          if (options.includeAlternatives) return result;
+        }
+      } catch (error) {
+        console.warn(`Search strategy ${attempts} failed:`, error.message);
+      }
+    }
+    
+    return {
+      inputData: prospect,
+      status: 'not_found',
+      confidence: 0,
+      matchedProspect: null,
+      candidates: [],
+      searchStrategy: 'none',
+      attempts: attempts,
+      titleKeywordsUsed: []
+    };
+  }
+  
+  // Strategy 1: Exact Name + Company Match
+  async searchExactMatch(prospect, outreachClient) {
+    const params = {
+      'filter[firstName]': prospect.firstName,
+      'filter[lastName]': prospect.lastName,
+      'page[size]': 10
+    };
+    
+    if (prospect.company) {
+      params['filter[company]'] = prospect.company;
+    } else if (prospect.accountName) {
+      params['filter[account][name]'] = prospect.accountName;
+    }
+    
+    const response = await outreachClient.get('/prospects', { params });
+    const matches = response.data.data;
+    
+    if (matches.length === 1) {
+      return {
+        inputData: prospect,
+        status: 'found',
+        confidence: 0.95,
+        matchedProspect: matches[0],
+        candidates: [],
+        searchStrategy: 'exact_name_company',
+        titleKeywordsUsed: []
+      };
+    }
+    
+    return { status: 'no_match', matches };
+  }
+  
+  // Strategy 2: Name + Account Fallback
+  async searchNameAccount(prospect, outreachClient) {
+    if (!prospect.accountName) return { status: 'no_match' };
+    
+    const params = {
+      'filter[firstName]': prospect.firstName,
+      'filter[lastName]': prospect.lastName,
+      'filter[account][name]': prospect.accountName,
+      'page[size]': 10
+    };
+    
+    const response = await outreachClient.get('/prospects', { params });
+    const matches = response.data.data;
+    
+    if (matches.length === 1) {
+      return {
+        inputData: prospect,
+        status: 'found',
+        confidence: 0.9,
+        matchedProspect: matches[0],
+        candidates: [],
+        searchStrategy: 'name_account',
+        titleKeywordsUsed: []
+      };
+    }
+    
+    return { status: 'no_match', matches };
+  }
+  
+  // Strategy 3: First Name + Company
+  async searchFirstNameCompany(prospect, outreachClient) {
+    const params = {
+      'filter[firstName]': prospect.firstName,
+      'page[size]': 20
+    };
+    
+    if (prospect.company) {
+      params['filter[company]'] = prospect.company;
+    } else if (prospect.accountName) {
+      params['filter[account][name]'] = prospect.accountName;
+    } else {
+      return { status: 'no_match' };
+    }
+    
+    const response = await outreachClient.get('/prospects', { params });
+    const matches = response.data.data;
+    
+    if (matches.length === 1) {
+      return {
+        inputData: prospect,
+        status: 'found',
+        confidence: 0.8,
+        matchedProspect: matches[0],
+        candidates: [],
+        searchStrategy: 'first_name_company',
+        titleKeywordsUsed: []
+      };
+    } else if (matches.length > 1) {
+      // Score by title similarity if we have title info
+      const scored = await this.scoreByTitleSimilarity(matches, prospect.title);
+      return this.formatMultipleCandidates(prospect, scored, 'first_name_company');
+    }
+    
+    return { status: 'no_match', matches };
+  }
+  
+  // Strategy 4: Last Name + Company
+  async searchLastNameCompany(prospect, outreachClient) {
+    const params = {
+      'filter[lastName]': prospect.lastName,
+      'page[size]': 20
+    };
+    
+    if (prospect.company) {
+      params['filter[company]'] = prospect.company;
+    } else if (prospect.accountName) {
+      params['filter[account][name]'] = prospect.accountName;
+    } else {
+      return { status: 'no_match' };
+    }
+    
+    const response = await outreachClient.get('/prospects', { params });
+    const matches = response.data.data;
+    
+    if (matches.length === 1) {
+      return {
+        inputData: prospect,
+        status: 'found',
+        confidence: 0.75,
+        matchedProspect: matches[0],
+        candidates: [],
+        searchStrategy: 'last_name_company',
+        titleKeywordsUsed: []
+      };
+    } else if (matches.length > 1) {
+      const scored = await this.scoreByTitleSimilarity(matches, prospect.title);
+      return this.formatMultipleCandidates(prospect, scored, 'last_name_company');
+    }
+    
+    return { status: 'no_match', matches };
+  }
+  
+  // Strategy 5: Email Fallback
+  async searchByEmail(prospect, outreachClient) {
+    if (!prospect.email) return { status: 'no_match' };
+    
+    const params = {
+      'filter[emails]': prospect.email,
+      'page[size]': 10
+    };
+    
+    const response = await outreachClient.get('/prospects', { params });
+    const matches = response.data.data;
+    
+    if (matches.length === 1) {
+      return {
+        inputData: prospect,
+        status: 'found',
+        confidence: 0.9,
+        matchedProspect: matches[0],
+        candidates: [],
+        searchStrategy: 'email_fallback',
+        titleKeywordsUsed: []
+      };
+    }
+    
+    return { status: 'no_match', matches };
+  }
+  
+  // Strategy 6: Company/Account + Title Keywords (NEW)
+  async searchByTitleKeywords(prospect, outreachClient) {
+    if (!prospect.title || (!prospect.company && !prospect.accountName)) {
+      return { status: 'no_match' };
+    }
+    
+    const titleKeywords = this.extractTitleKeywords(prospect.title);
+    if (titleKeywords.length === 0) return { status: 'no_match' };
+    
+    const params = {
+      'page[size]': 30
+    };
+    
+    // Add company/account filter
+    if (prospect.company) {
+      params['filter[company]'] = prospect.company;
+    } else {
+      params['filter[account][name]'] = prospect.accountName;
+    }
+    
+    // Try each keyword combination
+    for (const keyword of titleKeywords) {
+      params['filter[title]'] = keyword.term;
+      
+      try {
+        const response = await outreachClient.get('/prospects', { params });
+        const matches = response.data.data;
+        
+        if (matches.length > 0) {
+          // Rank by name similarity to original prospect
+          const ranked = await this.rankByNameSimilarity(matches, prospect);
+          
+          if (ranked.length > 0) {
+            return {
+              inputData: prospect,
+              status: ranked.length === 1 ? 'found' : 'multiple_candidates',
+              confidence: ranked[0].confidence,
+              matchedProspect: ranked[0].prospect,
+              candidates: ranked.slice(0, 3).map(r => ({
+                prospect: r.prospect,
+                confidence: r.confidence,
+                reason: 'title_keyword_match'
+              })),
+              searchStrategy: 'title_keywords',
+              titleKeywordsUsed: [keyword.term]
+            };
+          }
+        }
+      } catch (error) {
+        console.warn(`Title keyword search failed for ${keyword.term}:`, error.message);
+      }
+    }
+    
+    return { status: 'no_match' };
+  }
+  
+  // Strategy 7: Broad Keyword Matching (NEW)
+  async searchBroadKeywordMatch(prospect, outreachClient) {
+    if (!prospect.title) return { status: 'no_match' };
+    
+    const titleKeywords = this.extractTitleKeywords(prospect.title);
+    if (titleKeywords.length === 0) return { status: 'no_match' };
+    
+    // Search globally by title keywords
+    for (const keyword of titleKeywords) {
+      try {
+        const params = {
+          'filter[title]': keyword.term,
+          'page[size]': 50
+        };
+        
+        const response = await outreachClient.get('/prospects', { params });
+        let matches = response.data.data;
+        
+        // Filter by email domain if available
+        if (prospect.email) {
+          const domain = prospect.email.split('@')[1];
+          matches = matches.filter(p => 
+            p.attributes.emails?.some(email => email.includes(domain))
+          );
+        }
+        
+        if (matches.length > 0) {
+          // Rank by combined similarity (name + company + title)
+          const ranked = await this.rankByCombinedSimilarity(matches, prospect);
+          
+          if (ranked.length > 0) {
+            return {
+              inputData: prospect,
+              status: 'multiple_candidates',
+              confidence: Math.min(ranked[0].confidence, 0.6), // Cap at 0.6 for broad matches
+              matchedProspect: ranked[0].prospect,
+              candidates: ranked.slice(0, 3).map(r => ({
+                prospect: r.prospect,
+                confidence: r.confidence,
+                reason: 'broad_keyword_match'
+              })),
+              searchStrategy: 'broad_match',
+              titleKeywordsUsed: [keyword.term]
+            };
+          }
+        }
+      } catch (error) {
+        console.warn(`Broad keyword search failed for ${keyword.term}:`, error.message);
+      }
+    }
+    
+    return { status: 'no_match' };
+  }
+  
+  extractTitleKeywords(title) {
+    if (!title) return [];
+    
+    const keywordPatterns = [
+      { pattern: /\b(CEO|Chief Executive Officer)\b/i, term: 'CEO' },
+      { pattern: /\b(CTO|Chief Technology Officer)\b/i, term: 'CTO' },
+      { pattern: /\b(CFO|Chief Financial Officer)\b/i, term: 'CFO' },
+      { pattern: /\b(CMO|Chief Marketing Officer)\b/i, term: 'CMO' },
+      { pattern: /\b(COO|Chief Operating Officer)\b/i, term: 'COO' },
+      { pattern: /\b(VP|Vice President)\b/i, term: 'VP' },
+      { pattern: /\bDirector\b/i, term: 'Director' },
+      { pattern: /\bManager\b/i, term: 'Manager' },
+      { pattern: /\b(Lead|Senior Lead)\b/i, term: 'Lead' },
+      { pattern: /\bHead of\b/i, term: 'Head' },
+      { pattern: /\bPresident\b/i, term: 'President' },
+      { pattern: /\bFounder\b/i, term: 'Founder' },
+      { pattern: /\bOwner\b/i, term: 'Owner' },
+      { pattern: /\bPrincipal\b/i, term: 'Principal' },
+      { pattern: /\bSenior\b/i, term: 'Senior' }
+    ];
+    
+    const foundKeywords = [];
+    
+    for (const { pattern, term } of keywordPatterns) {
+      if (pattern.test(title)) {
+        foundKeywords.push({ pattern: pattern.source, term });
+      }
+    }
+    
+    return foundKeywords;
+  }
+  
+  async scoreByTitleSimilarity(prospects, targetTitle) {
+    if (!targetTitle) return prospects.map(p => ({ prospect: p, confidence: 0.5 }));
+    
+    return prospects.map(prospect => {
+      const prospectTitle = prospect.attributes.title || '';
+      const similarity = this.calculateStringSimilarity(targetTitle.toLowerCase(), prospectTitle.toLowerCase());
+      return {
+        prospect,
+        confidence: Math.max(0.4, similarity)
+      };
+    }).sort((a, b) => b.confidence - a.confidence);
+  }
+  
+  async rankByNameSimilarity(prospects, targetProspect) {
+    const targetName = `${targetProspect.firstName} ${targetProspect.lastName}`.toLowerCase();
+    
+    return prospects.map(prospect => {
+      const prospectName = `${prospect.attributes.firstName || ''} ${prospect.attributes.lastName || ''}`.toLowerCase();
+      const nameScore = this.calculateStringSimilarity(targetName, prospectName);
+      
+      let confidence = nameScore * 0.7; // Base on name similarity
+      
+      // Boost confidence if title matches
+      if (targetProspect.title && prospect.attributes.title) {
+        const titleScore = this.calculateStringSimilarity(
+          targetProspect.title.toLowerCase(),
+          prospect.attributes.title.toLowerCase()
+        );
+        confidence += titleScore * 0.3;
+      }
+      
+      return {
+        prospect,
+        confidence: Math.min(confidence, 0.85) // Cap for keyword matches
+      };
+    }).sort((a, b) => b.confidence - a.confidence);
+  }
+  
+  async rankByCombinedSimilarity(prospects, targetProspect) {
+    const targetName = `${targetProspect.firstName} ${targetProspect.lastName}`.toLowerCase();
+    const targetCompany = (targetProspect.company || targetProspect.accountName || '').toLowerCase();
+    const targetTitle = (targetProspect.title || '').toLowerCase();
+    
+    return prospects.map(prospect => {
+      const prospectName = `${prospect.attributes.firstName || ''} ${prospect.attributes.lastName || ''}`.toLowerCase();
+      const prospectCompany = (prospect.attributes.company || '').toLowerCase();
+      const prospectTitle = (prospect.attributes.title || '').toLowerCase();
+      
+      const nameScore = this.calculateStringSimilarity(targetName, prospectName);
+      const companyScore = this.calculateStringSimilarity(targetCompany, prospectCompany);
+      const titleScore = this.calculateStringSimilarity(targetTitle, prospectTitle);
+      
+      // Weighted average: name 40%, company 30%, title 30%
+      const confidence = (nameScore * 0.4) + (companyScore * 0.3) + (titleScore * 0.3);
+      
+      return {
+        prospect,
+        confidence: Math.min(confidence, 0.6) // Cap for broad matches
+      };
+    }).sort((a, b) => b.confidence - a.confidence);
+  }
+  
+  calculateStringSimilarity(str1, str2) {
+    if (!str1 || !str2) return 0;
+    
+    // Simple similarity using Jaccard index on words
+    const words1 = new Set(str1.split(/\s+/));
+    const words2 = new Set(str2.split(/\s+/));
+    
+    const intersection = new Set([...words1].filter(word => words2.has(word)));
+    const union = new Set([...words1, ...words2]);
+    
+    return intersection.size / union.size;
+  }
+  
+  formatMultipleCandidates(prospect, scoredProspects, strategy) {
+    if (scoredProspects.length === 0) {
+      return { status: 'no_match' };
+    }
+    
+    const topCandidate = scoredProspects[0];
+    
+    if (topCandidate.confidence > 0.8) {
+      return {
+        inputData: prospect,
+        status: 'found',
+        confidence: topCandidate.confidence,
+        matchedProspect: topCandidate.prospect,
+        candidates: [],
+        searchStrategy: strategy,
+        titleKeywordsUsed: []
+      };
+    }
+    
+    return {
+      inputData: prospect,
+      status: 'multiple_candidates',
+      confidence: topCandidate.confidence,
+      matchedProspect: topCandidate.prospect,
+      candidates: scoredProspects.slice(0, 3).map(s => ({
+        prospect: s.prospect,
+        confidence: s.confidence,
+        reason: 'title_similarity'
+      })),
+      searchStrategy: strategy,
+      titleKeywordsUsed: []
+    };
+  }
+  
+  calculateAverageConfidence(results) {
+    const foundResults = results.filter(r => r.confidence > 0);
+    if (foundResults.length === 0) return 0;
+    
+    const total = foundResults.reduce((sum, r) => sum + r.confidence, 0);
+    return Math.round((total / foundResults.length) * 100) / 100;
   }
 
   formatEmailBody(bodyText) {
