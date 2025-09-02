@@ -591,12 +591,28 @@ class OutreachMCPServer {
         },
         {
           name: 'create_sequence',
-          description: 'Create a new sequence in Outreach',
+          description: 'Create a new sequence in Outreach with email templates',
           inputSchema: {
             type: 'object',
             properties: {
               name: { type: 'string', description: 'Name of the sequence' },
-              description: { type: 'string', description: 'Description of the sequence' }
+              description: { type: 'string', description: 'Description of the sequence' },
+              emailSteps: {
+                type: 'array',
+                description: 'Array of email steps with template content',
+                items: {
+                  type: 'object',
+                  properties: {
+                    templateName: { type: 'string', description: 'Name for the email template' },
+                    subject: { type: 'string', description: 'Email subject line' },
+                    bodyText: { type: 'string', description: 'Email body text' },
+                    bodyHtml: { type: 'string', description: 'Email body HTML (optional)' },
+                    order: { type: 'number', description: 'Step order in sequence' },
+                    intervalDays: { type: 'number', description: 'Days to wait before this step', default: 3 }
+                  },
+                  required: ['templateName', 'subject', 'bodyText', 'order']
+                }
+              }
             },
             required: ['name']
           }
@@ -851,6 +867,34 @@ class OutreachMCPServer {
               bodyHtml: { type: 'string', description: 'Template body HTML' }
             },
             required: ['name', 'subject']
+          }
+        },
+        {
+          name: 'create_sequence_with_email_templates',
+          description: 'Create a complete sequence with multiple email templates (recommended for email campaigns)',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              sequenceName: { type: 'string', description: 'Name of the sequence' },
+              sequenceDescription: { type: 'string', description: 'Description of the sequence' },
+              emailTemplates: {
+                type: 'array',
+                description: 'Array of email templates to create and link to sequence steps',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', description: 'Template name (e.g., "Follow-up Email 1")' },
+                    subject: { type: 'string', description: 'Email subject line' },
+                    bodyText: { type: 'string', description: 'Plain text email body' },
+                    bodyHtml: { type: 'string', description: 'HTML email body (optional)' },
+                    stepOrder: { type: 'number', description: 'Order of this step in sequence (1, 2, 3...)' },
+                    delayDays: { type: 'number', description: 'Days to wait before sending this email', default: 3 }
+                  },
+                  required: ['name', 'subject', 'bodyText', 'stepOrder']
+                }
+              }
+            },
+            required: ['sequenceName', 'emailTemplates']
           }
         },
         
@@ -1200,17 +1244,84 @@ class OutreachMCPServer {
           return this.formatResponse('sequence', response.data.data);
         }
         case 'create_sequence': {
-          const response = await outreachClient.post('/sequences', {
-            data: {
-              type: 'sequence',
-              attributes: {
-                name: args.name,
-                description: args.description || '',
-                shareType: 'private'
+          // Enhanced sequence creation with template-first workflow
+          const createdTemplates = [];
+          let sequence = null;
+
+          try {
+            // 1. Create email templates first (if provided)
+            if (args.emailSteps && args.emailSteps.length > 0) {
+              for (const emailStep of args.emailSteps) {
+                const templateResponse = await outreachClient.post('/templates', {
+                  data: {
+                    type: 'template',
+                    attributes: {
+                      name: emailStep.templateName,
+                      subject: emailStep.subject,
+                      bodyText: emailStep.bodyText,
+                      bodyHtml: emailStep.bodyHtml || emailStep.bodyText
+                    }
+                  }
+                });
+                createdTemplates.push({
+                  template: templateResponse.data.data,
+                  order: emailStep.order,
+                  intervalDays: emailStep.intervalDays || 3
+                });
               }
             }
-          });
-          return this.formatResponse('sequence', response.data.data, true);
+
+            // 2. Create sequence structure
+            const sequenceResponse = await outreachClient.post('/sequences', {
+              data: {
+                type: 'sequence',
+                attributes: {
+                  name: args.name,
+                  description: args.description || '',
+                  shareType: 'private'
+                }
+              }
+            });
+            sequence = sequenceResponse.data.data;
+
+            // 3. Link templates to sequence steps with timing
+            if (createdTemplates.length > 0) {
+              for (const templateData of createdTemplates) {
+                await outreachClient.post('/sequenceSteps', {
+                  data: {
+                    type: 'sequenceStep',
+                    attributes: {
+                      order: templateData.order,
+                      stepType: 'auto_email',
+                      interval: templateData.intervalDays
+                    },
+                    relationships: {
+                      sequence: { data: { type: 'sequence', id: sequence.id } },
+                      template: { data: { type: 'template', id: templateData.template.id } }
+                    }
+                  }
+                });
+              }
+            }
+
+            return this.formatResponse('sequence', {
+              sequence: sequence,
+              templates: createdTemplates.map(t => t.template),
+              success: true,
+              message: `Sequence created with ${createdTemplates.length} email templates`
+            }, true);
+
+          } catch (error) {
+            // Rollback: delete any created templates if sequence creation fails
+            for (const templateData of createdTemplates) {
+              try {
+                await outreachClient.delete(`/templates/${templateData.template.id}`);
+              } catch (rollbackError) {
+                console.error('Template rollback failed:', rollbackError);
+              }
+            }
+            throw error;
+          }
         }
         case 'update_sequence': {
           const attributes = {};
@@ -1403,6 +1514,112 @@ class OutreachMCPServer {
         case 'get_current_user': {
           const response = await outreachClient.get('/users/me');
           return this.formatResponse('currentUser', response.data.data);
+        }
+
+        case 'create_sequence_with_email_templates': {
+          // Dedicated tool for creating sequences with complete email workflow
+          const createdTemplates = [];
+          let sequence = null;
+
+          try {
+            // Sort email templates by step order
+            const sortedTemplates = args.emailTemplates.sort((a, b) => a.stepOrder - b.stepOrder);
+
+            // 1. Create all email templates first
+            for (const emailTemplate of sortedTemplates) {
+              const templateResponse = await outreachClient.post('/templates', {
+                data: {
+                  type: 'template',
+                  attributes: {
+                    name: emailTemplate.name,
+                    subject: emailTemplate.subject,
+                    bodyText: emailTemplate.bodyText,
+                    bodyHtml: emailTemplate.bodyHtml || emailTemplate.bodyText
+                  }
+                }
+              });
+              
+              createdTemplates.push({
+                template: templateResponse.data.data,
+                stepOrder: emailTemplate.stepOrder,
+                delayDays: emailTemplate.delayDays || 3
+              });
+            }
+
+            // 2. Create sequence structure
+            const sequenceResponse = await outreachClient.post('/sequences', {
+              data: {
+                type: 'sequence',
+                attributes: {
+                  name: args.sequenceName,
+                  description: args.sequenceDescription || `Email sequence with ${createdTemplates.length} steps`,
+                  shareType: 'private'
+                }
+              }
+            });
+            sequence = sequenceResponse.data.data;
+
+            // 3. Create sequence steps linking templates with proper timing
+            const createdSteps = [];
+            for (const templateData of createdTemplates) {
+              const stepResponse = await outreachClient.post('/sequenceSteps', {
+                data: {
+                  type: 'sequenceStep',
+                  attributes: {
+                    order: templateData.stepOrder,
+                    stepType: 'auto_email',
+                    interval: templateData.delayDays
+                  },
+                  relationships: {
+                    sequence: { data: { type: 'sequence', id: sequence.id } },
+                    template: { data: { type: 'template', id: templateData.template.id } }
+                  }
+                }
+              });
+              createdSteps.push(stepResponse.data.data);
+            }
+
+            // Return comprehensive success response
+            return this.formatResponse('sequenceWithTemplates', {
+              sequence: sequence,
+              templates: createdTemplates.map(t => t.template),
+              steps: createdSteps,
+              success: true,
+              message: `Complete sequence created: '${args.sequenceName}' with ${createdTemplates.length} email templates`,
+              summary: {
+                sequenceId: sequence.id,
+                sequenceName: sequence.attributes.name,
+                templateCount: createdTemplates.length,
+                stepCount: createdSteps.length,
+                emailFlow: createdTemplates.map(t => ({
+                  order: t.stepOrder,
+                  templateName: t.template.attributes.name,
+                  subject: t.template.attributes.subject,
+                  delayDays: t.delayDays
+                }))
+              }
+            }, true);
+
+          } catch (error) {
+            // Rollback: delete any created templates and sequence on failure
+            for (const templateData of createdTemplates) {
+              try {
+                await outreachClient.delete(`/templates/${templateData.template.id}`);
+              } catch (rollbackError) {
+                console.error('Template rollback failed:', rollbackError);
+              }
+            }
+            
+            if (sequence) {
+              try {
+                await outreachClient.delete(`/sequences/${sequence.id}`);
+              } catch (rollbackError) {
+                console.error('Sequence rollback failed:', rollbackError);
+              }
+            }
+            
+            throw new Error(`Sequence creation failed: ${error.message}. All created resources have been cleaned up.`);
+          }
         }
 
         default:
