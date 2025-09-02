@@ -558,14 +558,31 @@ class OutreachMCPServer {
         },
         {
           name: 'search_prospects',
-          description: 'Search for prospects',
+          description: 'Search for prospects by name, email, title, company, or account',
           inputSchema: {
             type: 'object',
             properties: {
+              firstName: { type: 'string', description: 'First name to search for' },
+              lastName: { type: 'string', description: 'Last name to search for' },
+              name: { type: 'string', description: 'Full name to search for (searches both first and last name)' },
               email: { type: 'string', description: 'Email to search for' },
+              title: { type: 'string', description: 'Job title to search for' },
               company: { type: 'string', description: 'Company name to search for' },
+              accountName: { type: 'string', description: 'Account name to search for' },
               limit: { type: 'number', description: 'Number of prospects to return', default: 25 }
             }
+          }
+        },
+        {
+          name: 'find_prospects_by_name',
+          description: 'Find prospects by partial name match (fuzzy search)',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              nameQuery: { type: 'string', description: 'Name to search for (partial matches supported)' },
+              limit: { type: 'number', description: 'Number of prospects to return', default: 25 }
+            },
+            required: ['nameQuery']
           }
         },
         
@@ -1268,10 +1285,56 @@ class OutreachMCPServer {
         }
         case 'search_prospects': {
           const params_obj = { 'page[size]': args.limit || 25 };
+          
+          // Email search
           if (args.email) params_obj['filter[emails]'] = args.email;
+          
+          // Name searches
+          if (args.firstName) params_obj['filter[firstName]'] = args.firstName;
+          if (args.lastName) params_obj['filter[lastName]'] = args.lastName;
+          
+          // Full name search - search both first and last name fields
+          if (args.name) {
+            const nameParts = args.name.trim().split(/\s+/);
+            if (nameParts.length >= 2) {
+              params_obj['filter[firstName]'] = nameParts[0];
+              params_obj['filter[lastName]'] = nameParts.slice(1).join(' ');
+            } else {
+              // Single name - search both first and last name fields
+              params_obj['filter[firstName]'] = args.name;
+            }
+          }
+          
+          // Title search
+          if (args.title) params_obj['filter[title]'] = args.title;
+          
+          // Company search
           if (args.company) params_obj['filter[company]'] = args.company;
+          
+          // Account search - need to use account relationship filter
+          if (args.accountName) params_obj['filter[account][name]'] = args.accountName;
+          
           const response = await outreachClient.get('/prospects', { params: params_obj });
           return this.formatResponse('prospects', response.data.data);
+        }
+        case 'find_prospects_by_name': {
+          // Get all prospects and filter by name match client-side for fuzzy search
+          const response = await outreachClient.get('/prospects', { 
+            params: { 'page[size]': Math.min(args.limit * 3, 100) }  // Get more results to filter
+          });
+          
+          const nameQuery = args.nameQuery.toLowerCase();
+          const matchingProspects = response.data.data.filter(prospect => {
+            const firstName = prospect.attributes.firstName?.toLowerCase() || '';
+            const lastName = prospect.attributes.lastName?.toLowerCase() || '';
+            const fullName = `${firstName} ${lastName}`.trim();
+            
+            return firstName.includes(nameQuery) || 
+                   lastName.includes(nameQuery) || 
+                   fullName.includes(nameQuery);
+          }).slice(0, args.limit || 25);
+          
+          return this.formatResponse('prospects', matchingProspects);
         }
         
         // SEQUENCES
