@@ -1,9 +1,20 @@
 {
-  "name": "mcp-outreach-server",
+  "name": "@raphaelberrebi/mcp-outreach-server",
   "version": "1.0.0",
-  "description": "MCP server for Outreach.io integration",
+  "description": "Model Context Protocol server for Outreach API integration with 76 comprehensive tools covering all 33 Outreach API scopes",
   "main": "src/simple-index.js",
   "type": "module",
+  "bin": {
+    "mcp-outreach-server": "./src/simple-index.js"
+  },
+  "files": [
+    "src/simple-index.js",
+    "README.md",
+    "package.json",
+    "LICENSE",
+    "INSTALLATION-SIMPLE.md",
+    "TROUBLESHOOTING-SIMPLE.md"
+  ],
   "scripts": {
     "start": "node src/simple-index.js",
     "dev": "node --watch src/simple-index.js",
@@ -29,9 +40,15 @@
   },
   "keywords": [
     "mcp",
+    "model-context-protocol",
     "outreach",
+    "api",
+    "claude",
+    "ai",
     "sales",
-    "automation"
+    "automation",
+    "crm",
+    "sales-engagement"
   ],
   "author": "",
   "license": "MIT",
