@@ -1513,6 +1513,86 @@ class OutreachMCPServer {
       });
     });
 
+    // OAuth callback endpoint
+    app.get('/callback', async (req, res) => {
+      const { code, error } = req.query;
+      
+      if (error) {
+        return res.status(400).send(`
+          <html>
+            <body style="font-family: system-ui; padding: 40px;">
+              <h1 style="color: red;">❌ Authorization Failed</h1>
+              <p>Error: ${error}</p>
+            </body>
+          </html>
+        `);
+      }
+
+      if (!code) {
+        return res.status(400).send(`
+          <html>
+            <body style="font-family: system-ui; padding: 40px;">
+              <h1 style="color: red;">❌ No Authorization Code</h1>
+              <p>Authorization code is required to complete OAuth flow.</p>
+            </body>
+          </html>
+        `);
+      }
+
+      try {
+        // Exchange code for tokens
+        const params = new URLSearchParams({
+          client_id: process.env.OUTREACH_CLIENT_ID,
+          client_secret: process.env.OUTREACH_CLIENT_SECRET,
+          redirect_uri: `${req.protocol}://${req.get('host')}/callback`,
+          grant_type: 'authorization_code',
+          code: code
+        });
+
+        const response = await axios.post('https://api.outreach.io/oauth/token', params, {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        });
+
+        const { access_token, refresh_token, expires_in } = response.data;
+
+        res.send(`
+          <html>
+            <body style="font-family: system-ui; padding: 40px; max-width: 600px; margin: 0 auto;">
+              <h1 style="color: green;">✅ Authorization Successful!</h1>
+              <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3>New Token Information:</h3>
+                <p><strong>Access Token:</strong> ${access_token.substring(0, 20)}...</p>
+                <p><strong>Refresh Token:</strong> <code>${refresh_token}</code></p>
+                <p><strong>Expires In:</strong> ${expires_in} seconds</p>
+              </div>
+              <div style="background: #FEF3C7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3>⚠️ Important:</h3>
+                <p>Copy the refresh token above and update your Railway environment variables:</p>
+                <pre style="background: #000; color: #0f0; padding: 10px; border-radius: 4px;">railway variables set OUTREACH_REFRESH_TOKEN="${refresh_token}"</pre>
+              </div>
+              <button onclick="window.close()" style="padding: 12px 24px; background: #4F46E5; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                Close Window
+              </button>
+            </body>
+          </html>
+        `);
+
+      } catch (error) {
+        console.error('OAuth token exchange error:', error.response?.data || error.message);
+        res.status(500).send(`
+          <html>
+            <body style="font-family: system-ui; padding: 40px;">
+              <h1 style="color: red;">❌ Token Exchange Failed</h1>
+              <p>Error: ${error.message}</p>
+              <pre>${JSON.stringify(error.response?.data, null, 2)}</pre>
+            </body>
+          </html>
+        `);
+      }
+    });
+
     // Main MCP endpoint
     app.post('/mcp', async (req, res) => {
       try {
