@@ -772,13 +772,12 @@ class OutreachMCPServer {
           inputSchema: {
             type: 'object',
             properties: {
-              prospectId: { type: 'number', description: 'Associated prospect ID' },
-              subject: { type: 'string', description: 'Task subject' },
-              note: { type: 'string', description: 'Task notes' },
+              subject: { type: 'string', description: 'Task subject/description' },
+              note: { type: 'string', description: 'Additional task notes' },
               dueAt: { type: 'string', description: 'Due date (ISO 8601)' },
-              taskType: { type: 'string', description: 'Type of task' }
+              taskType: { type: 'string', description: 'Type of task', default: 'manual' }
             },
-            required: ['prospectId', 'subject']
+            required: ['subject']
           }
         },
         {
@@ -1336,13 +1335,9 @@ class OutreachMCPServer {
             data: {
               type: 'task',
               attributes: {
-                subject: args.subject,
-                note: args.note,
+                note: args.subject + (args.note ? '\n\n' + args.note : ''),
                 dueAt: args.dueAt,
-                taskType: args.taskType
-              },
-              relationships: {
-                prospect: { data: { type: 'prospect', id: args.prospectId.toString() } }
+                taskType: args.taskType || 'manual'
               }
             }
           });
