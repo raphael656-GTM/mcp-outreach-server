@@ -1544,7 +1544,7 @@ class OutreachMCPServer {
         const params = new URLSearchParams({
           client_id: process.env.OUTREACH_CLIENT_ID,
           client_secret: process.env.OUTREACH_CLIENT_SECRET,
-          redirect_uri: `${req.protocol}://${req.get('host')}/callback`,
+          redirect_uri: 'https://mcp-outreach-server-production.up.railway.app/callback',
           grant_type: 'authorization_code',
           code: code
         });
