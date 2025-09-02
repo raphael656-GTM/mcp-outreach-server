@@ -1305,8 +1305,8 @@ class OutreachMCPServer {
                 createdTemplates.push({
                   template: templateResponse.data.data,
                   order: emailStep.order,
-                  intervalDays: emailStep.intervalDays || 3,
-                  intervalMinutes: (emailStep.intervalDays || 3) * 1440  // 1440 minutes = 1 day (24 * 60)
+                  intervalDays: emailStep.intervalDays ?? 3,
+                  intervalMinutes: (emailStep.intervalDays ?? 3) * 1440  // 1440 minutes = 1 day (24 * 60), ?? handles 0 correctly
                 });
               }
             }
@@ -1318,8 +1318,7 @@ class OutreachMCPServer {
                 attributes: {
                   name: args.name,
                   description: args.description || '',
-                  shareType: 'private',
-                  scheduleType: 'interval'  // Ensure interval-based scheduling
+                  shareType: 'private'
                 }
               }
             });
@@ -1603,7 +1602,7 @@ class OutreachMCPServer {
               createdTemplates.push({
                 template: templateResponse.data.data,
                 stepOrder: emailTemplate.stepOrder,
-                delayDays: emailTemplate.delayDays || 3
+                delayDays: emailTemplate.delayDays ?? 3
               });
             }
 
@@ -1614,8 +1613,7 @@ class OutreachMCPServer {
                 attributes: {
                   name: args.sequenceName,
                   description: args.sequenceDescription || `Email sequence with ${createdTemplates.length} steps`,
-                  shareType: 'private',
-                  scheduleType: 'interval'
+                  shareType: 'private'
                 }
               }
             });
@@ -1719,7 +1717,7 @@ class OutreachMCPServer {
               createdTemplates.push({
                 template: templateResponse.data.data,
                 stepOrder: emailTemplate.stepOrder,
-                delayDays: emailTemplate.delayDays || 3
+                delayDays: emailTemplate.delayDays ?? 3
               });
             }
 
@@ -1730,8 +1728,7 @@ class OutreachMCPServer {
                 attributes: {
                   name: args.sequenceName,
                   description: args.sequenceDescription || `Email sequence with ${createdTemplates.length} steps`,
-                  shareType: 'private',
-                  scheduleType: 'interval'
+                  shareType: 'private'
                 }
               }
             });
