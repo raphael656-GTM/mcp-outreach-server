@@ -596,8 +596,7 @@ class OutreachMCPServer {
             type: 'object',
             properties: {
               name: { type: 'string', description: 'Name of the sequence' },
-              description: { type: 'string', description: 'Description of the sequence' },
-              enabled: { type: 'boolean', description: 'Whether sequence is enabled', default: true }
+              description: { type: 'string', description: 'Description of the sequence' }
             },
             required: ['name']
           }
@@ -1208,7 +1207,6 @@ class OutreachMCPServer {
               attributes: {
                 name: args.name,
                 description: args.description || '',
-                enabled: args.enabled !== undefined ? args.enabled : true,
                 shareType: 'private'
               }
             }
