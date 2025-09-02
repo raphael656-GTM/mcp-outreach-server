@@ -875,8 +875,8 @@ class OutreachMCPServer {
             properties: {
               name: { type: 'string', description: 'Template name' },
               subject: { type: 'string', description: 'Email subject' },
-              bodyText: { type: 'string', description: 'Template body text' },
-              bodyHtml: { type: 'string', description: 'Template body HTML' }
+              bodyText: { type: 'string', description: 'Plain text content (will be converted to HTML if bodyHtml not provided)' },
+              bodyHtml: { type: 'string', description: 'HTML email content (optional, will auto-generate bodyText)' }
             },
             required: ['name', 'subject']
           }
@@ -1270,7 +1270,6 @@ class OutreachMCPServer {
                     attributes: {
                       name: emailStep.templateName,
                       subject: emailStep.subject,
-                      bodyText: emailStep.bodyText,
                       bodyHtml: emailStep.bodyHtml || emailStep.bodyText
                     }
                   }
@@ -1529,8 +1528,7 @@ class OutreachMCPServer {
               attributes: {
                 name: args.name,
                 subject: args.subject,
-                bodyText: args.bodyText,
-                bodyHtml: args.bodyHtml
+                bodyHtml: args.bodyHtml || args.bodyText
               }
             }
           });
@@ -1568,7 +1566,6 @@ class OutreachMCPServer {
                   attributes: {
                     name: emailTemplate.name,
                     subject: emailTemplate.subject,
-                    bodyText: emailTemplate.bodyText,
                     bodyHtml: emailTemplate.bodyHtml || emailTemplate.bodyText
                   }
                 }
