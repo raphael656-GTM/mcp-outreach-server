@@ -587,13 +587,13 @@ class OutreachMCPServer {
         },
         {
           name: 'bulk_search_prospects',
-          description: 'Search multiple prospects with 7-tier intelligent fallback strategy',
+          description: 'Search multiple prospects with intelligent fallback strategy - optimized for large lists (up to 500)',
           inputSchema: {
             type: 'object',
             properties: {
               prospects: {
                 type: 'array',
-                description: 'Array of prospects to search for',
+                description: 'Array of prospects to search for (up to 500)',
                 items: {
                   type: 'object',
                   properties: {
@@ -609,10 +609,15 @@ class OutreachMCPServer {
               },
               concurrency: { 
                 type: 'number', 
-                description: 'Number of concurrent searches (1-10)', 
-                default: 5,
+                description: 'Number of concurrent searches (1-20, auto-optimized for large lists)', 
+                default: 10,
                 minimum: 1,
-                maximum: 10
+                maximum: 20
+              },
+              fastMode: {
+                type: 'boolean',
+                description: 'Use fast mode for 100+ prospects (3 strategies vs 6+ strategies)',
+                default: false
               },
               matchThreshold: { 
                 type: 'number', 
@@ -1410,28 +1415,43 @@ class OutreachMCPServer {
           return this.formatResponse('prospects', matchingProspects);
         }
         case 'bulk_search_prospects': {
-          const { prospects, concurrency = 5 } = args;
+          const { prospects, concurrency = 10, fastMode = false, progressCallback } = args;
           
           // Validate input
           if (!Array.isArray(prospects) || prospects.length === 0) {
             throw new Error('Prospects array is required and must not be empty');
           }
           
-          if (prospects.length > 200) {
-            throw new Error('Maximum 200 prospects allowed per bulk search');
+          if (prospects.length > 500) {
+            throw new Error('Maximum 500 prospects allowed per bulk search');
           }
+          
+          // Dynamic concurrency based on list size
+          const optimalConcurrency = Math.min(
+            concurrency,
+            prospects.length >= 100 ? 15 : prospects.length >= 50 ? 12 : 10
+          );
           
           const startTime = Date.now();
           const results = [];
+          let processedCount = 0;
           
-          // Process prospects in batches for concurrency control
-          for (let i = 0; i < prospects.length; i += concurrency) {
-            const batch = prospects.slice(i, i + concurrency);
+          // Process prospects in optimized batches
+          for (let i = 0; i < prospects.length; i += optimalConcurrency) {
+            const batch = prospects.slice(i, i + optimalConcurrency);
             const batchPromises = batch.map(prospect => 
-              this.simpleProspectSearch(prospect, outreachClient)
+              fastMode 
+                ? this.fastProspectSearch(prospect, outreachClient)
+                : this.simpleProspectSearch(prospect, outreachClient)
             );
             
             const batchResults = await Promise.allSettled(batchPromises);
+            processedCount += batch.length;
+            
+            // Progress reporting for large lists
+            if (prospects.length >= 50 && processedCount % 25 === 0) {
+              console.log(`Progress: ${processedCount}/${prospects.length} prospects processed (${Math.round(processedCount/prospects.length*100)}%)`);
+            }
             
             // Convert Promise.allSettled results to our format
             batchResults.forEach((result, index) => {
@@ -2033,6 +2053,54 @@ class OutreachMCPServer {
 
   // ===== SIMPLE & RELIABLE BULK SEARCH =====
   
+  async fastProspectSearch(prospect, outreachClient) {
+    try {
+      // Fast mode: Only use the most effective strategies
+      
+      // Strategy 1: Name only search (fastest, catches most cases)
+      const nameResult = await this.searchByNameOnly(prospect, outreachClient);
+      if (nameResult.status === 'found') return nameResult;
+      
+      // Strategy 2: If multiple matches, try company filtering immediately  
+      if (nameResult.status === 'multiple_candidates' && prospect.company) {
+        return nameResult; // Return multiple candidates for user review
+      }
+      
+      // Strategy 3: Try firstName + company for broader search
+      if (prospect.company) {
+        const firstNameResult = await this.searchByFirstNameAndCompany(prospect, outreachClient);
+        if (firstNameResult.status === 'found' || firstNameResult.status === 'multiple_candidates') {
+          return firstNameResult;
+        }
+      }
+      
+      // Fast mode: Stop here instead of trying all 6+ strategies
+      return {
+        inputData: prospect,
+        status: 'not_found',
+        confidence: 0,
+        matchedProspect: null,
+        candidates: [],
+        searchStrategy: 'fast_mode_exhausted',
+        attempts: 3,
+        titleKeywordsUsed: []
+      };
+      
+    } catch (error) {
+      return {
+        inputData: prospect,
+        status: 'error',
+        confidence: 0,
+        matchedProspect: null,
+        candidates: [],
+        searchStrategy: 'error',
+        attempts: 1,
+        error: error.message,
+        titleKeywordsUsed: []
+      };
+    }
+  }
+
   async simpleProspectSearch(prospect, outreachClient) {
     try {
       // Strategy 1: Try firstName + lastName first (most reliable)
